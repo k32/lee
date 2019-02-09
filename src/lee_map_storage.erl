@@ -20,8 +20,18 @@ get(_, Map, Key) ->
             undefined
     end.
 
-list(_, Map, Prefix) ->
-    [K || K <- maps:keys(Map), lists:prefix(Prefix, K)].
+list(Model, Map, Pattern) ->
+    L = length(Pattern),
+    lists:usort(
+      lists:filtermap( fun(K0) ->
+                               K = lists:sublist(K0, L),
+                               case lee_model:match(Model, K, Pattern) of
+                                   true -> {true, K};
+                                   false -> false
+                               end
+                       end
+                     , maps:keys(Map)
+                     )).
 
 put(_, Map, List) ->
     maps:merge(Map, maps:from_list(List)).

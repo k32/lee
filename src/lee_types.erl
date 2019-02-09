@@ -1,53 +1,53 @@
 -module(lee_types).
 
 %% API exports
--export([ union/2
-        , union/1
-        , boolean/0
+-export([ union/2  % Import~
+        , union/1  % Import~
+        , boolean/0  % Import~
         , validate_union/3
         , print_union/2
 
-        , term/0
-        , any/0
+        , term/0  % Import~
+        , any/0  % Import~
         , validate_term/3
 
-        , integer/0
+        , integer/0  % Import~
         , non_neg_integer/0
-        , range/2
+        , range/2  % Import~
         , validate_integer/3
         , print_integer/2
 
-        , float/0
+        , float/0  % Import~
         , validate_float/3
 
-        , atom/0
+        , atom/0  % Import~
         , validate_atom/3
 
-        , binary/0
+        , binary/0  % Import~
         , validate_binary/3
 
-        , list/0
-        , list/1
-        , nonempty_list/1
-        , string/0
+        , list/0  % Import~
+        , list/1  % Import~
+        , nonempty_list/1  % Import~
+        , string/0  % Import~
         , validate_list/3
         , print_list/2
 
-        , tuple/0
+        , tuple/0  % Import~
         , validate_any_tuple/3
 
-        , tuple/1
+        , tuple/1  % Import~
         , validate_tuple/3
         , print_tuple/2
 
-        , map/2
+        , map/2  % Import~
         , validate_map/3
 
         , exact_map/1
         , validate_exact_map/3
         , print_exact_map/2
 
-        , number/0
+        , number/0  % Import~
 
         , print_type/2
         ]).
@@ -93,11 +93,6 @@
         ?te(?FUNCTION_NAME, ?FUNCTION_ARITY, Attrs, Parameters)).
 -define(te(Parameters),
         ?te(?FUNCTION_NAME, ?FUNCTION_ARITY, #{}, Parameters)).
-
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
 
 %%====================================================================
 %% API functions
@@ -529,180 +524,3 @@ validate_list_(Model, Param, [Term|Tail]) ->
     lee:validate_term(Model, Param, Term) =:= ok
         orelse throw({badelem, Term}),
     validate_list_(Model, Param, Tail).
-
-%%====================================================================
-%% Unit tests
-%%====================================================================
-
-%% Can't use PropER in this module
-
--ifdef(TEST).
-
--define(valid(Type, Term),
-        ?assertMatch( ok
-                    , lee:validate_term(Model, Type, Term)
-                    )).
-
--define(invalid(Type, Term),
-        ?assertMatch( {error, _}
-                    , lee:validate_term(Model, Type, Term)
-                    )).
-
-validate_concrete_atom_test() ->
-    Model = lee:base_model(),
-    ?valid(true, true),
-    ?valid(false, false),
-    ?invalid(foo, 1),
-    ?invalid(foo, []),
-    ?invalid(foo, bar).
-
-validate_bool_test() ->
-    Model = lee:base_model(),
-    ?valid(boolean(), true),
-    ?valid(boolean(), false),
-    ?invalid(boolean(), 1),
-    ?invalid(boolean(), {}),
-    ?invalid(boolean(), foo).
-
-integer_test() ->
-    Model = lee:base_model(),
-    ?valid(integer(), -1),
-    ?valid(integer(), 1000),
-    ?valid(integer(), 0),
-    ?invalid(integer(), 1.0),
-    ?invalid(integer(), foo),
-    ?valid(range(-1, 1), 1),
-    ?valid(range(-1, 1), -1),
-    ?invalid(range(-1, 1), -2),
-    ?invalid(range(-1, 1), 2),
-    ?valid(non_neg_integer(), 0),
-    ?valid(non_neg_integer(), 1),
-    ?invalid(non_neg_integer(), -1).
-
-union_test() ->
-    Model = lee:base_model(),
-    ?valid(number(), 1),
-    ?valid(number(), 1.1),
-    ?invalid(number(), []).
-
-term_test() ->
-    Model = lee:base_model(),
-    ?valid(term(), 1),
-    ?valid(term(), 1.1),
-    ?valid(term(), {1, 2, [], foo}),
-    ?valid(term(), [foo, 1, [] | gg]).
-
-atom_test() ->
-    Model = lee:base_model(),
-    ?valid(atom(), foo),
-    ?valid(atom(), bar),
-    ?invalid(atom(), {}),
-    ?invalid(atom(), 1).
-
-list_test() ->
-    Model = lee:base_model(),
-    ?valid(list(), []),
-    ?valid(nonempty_list(integer()), [1, 2, 3]),
-    ?invalid(nonempty_list(term()), []),
-    UnionL = list(union(boolean(), integer())),
-    ?valid(UnionL, [true, false, 1, 10, -1]),
-    ?invalid(UnionL, [true, false, 1, bar]),
-    ?invalid(list(), [foo, bar | baz]).
-
-string_test() ->
-    Model = lee:base_model(),
-    ?valid(string(), "this is a string"),
-    ?valid(string(), "(✿ ┛O‿‿O)┛彡♥   ¯\_(ツ)_/¯"),
-    ?invalid(string(), "foo" ++ [bar, {}] ++ "baz"),
-    ?invalid(string(), [-1, 2]).
-
-tuple_test() ->
-    Model = lee:base_model(),
-    ?valid(tuple(), {}),
-    ?valid(tuple(), {foo, 1, []}),
-    ?invalid(tuple(), 1),
-    ?invalid(tuple(), []),
-
-    ?valid(tuple([]), {}),
-    ?invalid(tuple([]), {1}),
-
-    T = tuple([atom(), integer()]),
-    ?valid(T, {foo, 1}),
-    ?valid(T, {false, -1}),
-    ?invalid(T, {false, -1, 5}),
-    ?invalid(T, {false}),
-    ?invalid(T, {false, "1"}).
-
-binary_test() ->
-    Model = lee:base_model(),
-    ?valid(binary(), <<>>),
-    ?valid(binary(), <<"foo">>),
-    ?invalid(binary(), "fooo"),
-    ?invalid(binary(), 1).
-
-map_test() ->
-    Model = lee:base_model(),
-    T = map(atom(), string()),
-    ?valid(T, #{}),
-    ?valid(T, #{foo => "bar"}),
-    ?invalid(T, #{ foo => "bar"
-                 , "bar" => foo
-                 , baz => "quux"
-                 }),
-    ?invalid(T, #{ foo => 1
-                 , bar => "bar"
-                 }).
-
-exact_map_test() ->
-    Model = lee:base_model(),
-    T = exact_map(#{ foo => boolean()
-                   , bar => string()
-                   }),
-    ?valid(T, #{foo => true, bar => "bar"}),
-    ?valid(T, #{foo => false, bar => []}),
-    ?invalid(T, #{foo => foo, bar => "bar"}),
-    ?invalid(T, #{foo => true}),
-    ?invalid(T, #{foo => true, bar => 1}).
-
-typedef_test() ->
-    StupidList =
-        fun(A) ->
-                #type{id = [stupid_list], parameters = [A]}
-        end,
-    Model0 = #{stupid_list =>
-                   {[typedef]
-                   , #{ type => union( tuple([{var, '$a'}, StupidList({var, '$a'})])
-                                     , nil
-                                     )
-                      , type_variables => ['$a']
-                      , typename => "stupid_list"
-                      }
-                   , #{}
-                   }
-              },
-    {ok, Model} = lee_model:merge(Model0, lee:base_model()),
-    T = StupidList(union(integer(), foo)),
-    ?valid(T, nil),
-    ?valid(T, {1, nil}),
-    ?valid(T, {foo, {1, nil}}),
-    ?valid(T, {42, {foo, {1, nil}}}),
-    ?invalid(T, bar),
-    ?invalid(T, 1.1),
-    ?invalid(T, {1, foo}),
-    ?invalid(T, {foo, {42, {1.1, nil}}}).
-
-typedef_2_test() ->
-    Model0 = #{foo => {[typedef]
-                      , #{ type => {var, '1'}
-                         , type_variables => ['1']
-                         , tupename => "foo"
-                         }
-                      , #{}
-                      }},
-    {ok, Model} = lee_model:merge(Model0, lee:base_model()),
-    T = fun(A) -> #type{id = [foo], parameters = [A]} end,
-    ?valid(T(boolean()), true),
-    ?valid(T(boolean()), false),
-    ?invalid(T(boolean()), 1).
-
--endif.

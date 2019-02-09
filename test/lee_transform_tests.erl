@@ -1,9 +1,7 @@
 -module(lee_transform_tests).
 
 -include_lib("eunit/include/eunit.hrl").
-
 -include_lib("lee/include/lee.hrl").
-
 -include_lib("lee/include/lee_types.hrl").
 
 -define(typedef(TN, Type, TypeVars),

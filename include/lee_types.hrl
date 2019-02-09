@@ -12,6 +12,7 @@
                    , float/0
                    , atom/0
                    , binary/0
+                   , list/0
                    , list/1
                    , nonempty_list/1
                    , string/0

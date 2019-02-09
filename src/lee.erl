@@ -7,9 +7,9 @@
         , metametamodel/0
         , validate_term/3
         , get/3
+        , list_instances/3
         , validate/2
         , validate_value/4
-        , validate_command/4
         , from_string/3
         ]).
 
@@ -73,10 +73,6 @@
 
 -define(print(Fun), #{print => fun lee_types:Fun/2}).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
 %%====================================================================
 %% API functions
 %%====================================================================
@@ -119,22 +115,9 @@ base_metamodel() ->
                               {[metatype]
                               , #{validate_mo => fun validate_value/4}
                               }
-                        , command =>
-                              {[metatype]
-                              , #{validate_mo => fun validate_command/4}
-                              }
-                        , valid_file =>
-                              {[metatype]
-                              , #{validate_mo => fun validate_valid_file/4}
-                              }
-                        , type =>
-                              {[metatype]
-                              , #{}
-                              }
-                        , typedef =>
-                              {[metatype]
-                              , #{}
-                              }
+                        , map => {[metatype] , #{}}
+                        , type => {[metatype] , #{}}
+                        , typedef => {[metatype] , #{}}
                         }
                      ),
     {ok, Val} = lee_model:merge( Model
@@ -195,17 +178,23 @@ get(Model, Data, Key) ->
             end
     end.
 
+%% Get all MOC instances from the config:
+-spec list_instances(lee:model(), data(), lee:key()) ->
+                           {ok, term()} | undefined.
+list_instances(Model, Data, Key) ->
+    error(todo).
+
 %% Validate the config against a model
--spec validate(lee:model(), term()) ->
+-spec validate(lee:model(), data()) ->
                             {ok, Warnings :: [string()]}
                           | {error, Errors :: [string()], Warnings :: [string()]}
                           .
 validate(Model, Config) ->
     ModelIdx = lee_model:mk_metatype_index(Model#model.model),
     {Errors, Warnings} =
-        lists:foldl( fun({MT, MOCS}, {E0, W0}) ->
-                             {E1, W1} = validate_mt_instances(Model, Config, MT, MOCS),
-                             {E1 ++ E0, W1 ++ W0}
+        lists:foldl( fun({MT, MOCS}, {Errors0, Warnings0}) ->
+                             {Errors1, Warnings1} = validate_mt_instances(Model, Config, MT, MOCS),
+                             {Errors1 ++ Errors0, Warnings1 ++ Warnings0}
                      end
                    , {[], []}
                    , maps:to_list(ModelIdx)
@@ -231,12 +220,19 @@ from_string(Model, Type = #type{id = TId}, String) ->
 %% Internal functions
 %%====================================================================
 
+-spec validate_mt_instances( lee:model()
+                           , lee:data()
+                           , lee:key()
+                           , map_sets:set(lee:key())
+                           ) -> {ok, Warnings :: [string()]}
+                              | {error, Errors :: [string()], Warnings :: [string()]}
+                              .
 validate_mt_instances(Model, Config, MetaTypeId, MOCS) ->
     #model{metamodel = Meta} = Model,
     {[metatype], Attrs, _} = lee_model:get([metatype, MetaTypeId], Meta),
     Validate = maps:get( validate_mo
                        , Attrs
-                       , fun(_,_,_,_) -> ok end
+                       , fun(_,_,_,_) -> {[], []} end
                        ),
     GlobalValidate = maps:get(meta_global_validate, Attrs, fixme),
     lists:foldl( fun(MOCId, {E0, W0}) ->
@@ -251,44 +247,49 @@ validate_mt_instances(Model, Config, MetaTypeId, MOCS) ->
                , map_sets:to_list(MOCS)
                ).
 
+-spec validate_moc_instances( lee:model()
+                            , lee:data()
+                            , fun()
+                            , lee:key()
+                            ) -> {[string()], [string()]}.
 validate_moc_instances(Model = #model{model = MF}, Config, Validate, MOCId) ->
     MOC = lee_model:get(MOCId, MF),
-    case Validate(Model, Config, MOCId, MOC) of
-        ok ->
-            {[], []};
-        {error, Err} ->
-            {[Err], []}
-    end.
+    Validate(Model, Config, MOCId, MOC).
 
-validate_value(Model, Data, MOId, {_, Attrs, _}) ->
+validate_value(Model, Data, MOCId, {_, Attrs, _}) ->
     Type = maps:get(type, Attrs),
     Mandatory = maps:get(mandatory, Attrs, false),
-    case {get(Model, Data, MOId), Mandatory} of
+    Instances = case lee_model:optional_part(Model, MOCId) of
+                    {[], MOCId} ->
+                        [MOCId];
+                    {Optional, Required} ->
+                        [I ++ Required || I <- lee_storage:list(Model, Data, Optional)]
+                end,
+    lists:foldl( fun(Id, {Err0, Warn0}) ->
+                         {Err1, Warn1} = validate_instance(Model, Data, Id, Mandatory, Type),
+                         {Err1 ++ Err0, Warn1 ++ Warn0}
+                 end
+               , {[], []}
+               , Instances
+               ).
+
+validate_instance(Model, Data, MOIid, Mandatory, Type) ->
+    case {get(Model, Data, MOIid), Mandatory} of
         {{ok, Term}, _} ->
-            validate_term(Model#model.model, Type, Term);
-        {undefined, false} ->
-            ok;
-        {undefined, true} ->
-            {error, format( "Mandatory value ~p is missing in the config"
-                          , [MOId]
-                          )}
-    end.
-
-validate_valid_file(Model, Data, MOId, _) ->
-    case get(Model, Data, MOId) of
-        {ok, Val} ->
-            case io_lib:char_list(Val) andalso filelib:is_file(Val) of
-                true ->
-                    ok;
-                false ->
-                    {error, format("File ~p does not exist", [Val])}
+            case validate_term(Model#model.model, Type, Term) of
+                ok ->
+                    {[], []};
+                {error, Err} ->
+                    {[Err], []}
             end;
-        undefined ->
-            ok
+        {undefined, false} ->
+            {[], []};
+        {undefined, true} ->
+            Err = format( "Mandatory value ~p is missing in the config"
+                        , [MOIid]
+                        ),
+            {[Err] , []}
     end.
-
-validate_command(Model, Config, MOCId, {_, Attrs, Params}) ->
-    error(undefined).
 
 %% TODO get rid of duplicated functions and types
 format(Fmt, Attrs) ->
@@ -309,85 +310,3 @@ subst_type_vars(Type = #type{parameters = Params0}, VarVals) ->
                       subst_type_vars(I, VarVals)
               end || I <- Params0],
     Type#type{parameters = Params}.
-
-%%====================================================================
-%% Unit tests
-%%====================================================================
-
--ifdef(TEST).
-
--define(moc, {[], #{}, #{}}).
-
-namespace_test() ->
-    ?assertMatch( #{foo := #{bar := #{baz := #{}}}}
-                , namespace([foo, bar], #{baz => #{}})
-                ).
-
--define(valid(Config),
-        ?assertMatch( {ok, _}
-                    , catch lee:validate( Model
-                                        , #data{ backend = lee_map_storage
-                                               , data    = Config
-                                               }
-                                        )
-                    )).
-
--define(invalid(Config),
-        ?assertMatch( {error, _, _}
-                    , catch lee:validate( Model
-                                        , #data{ backend = lee_map_storage
-                                               , data    = Config
-                                               }
-                                        )
-                    )).
-
-validate_test() ->
-    Model0 = #{ foo => {[value]
-                       , #{mandatory => true, type => lee_types:boolean()}
-                       }
-              , bar => {[value]
-                       , #{type => lee_types:integer()}
-                       }
-              },
-    {ok, Model} = lee_model:create( [lee:base_metamodel()]
-                                  , [lee:base_model(), Model0]
-                                  ),
-    ?valid(#{[foo] => true}),
-    ?valid(#{[foo] => true, [bar] => 1}),
-    ?valid(#{[foo] => false, [bar] => -12}),
-    ?invalid(#{}),
-    ?invalid(#{[bar] => 1}),
-    ?invalid(#{[foo] => 1}),
-    ?invalid(#{[foo] => true, [bar] => 1.0}),
-    ok.
-
-get_test() ->
-    Model0 = #{ foo => {[value]
-                       , #{mandatory => true, type => lee_types:boolean()}
-                       }
-              , bar => {[value]
-                       , #{type => lee_types:integer(), default => 42}
-                       }
-              },
-    {ok, Model} = lee_model:create( [lee:base_metamodel()]
-                                  , [lee:base_model(), Model0]
-                                  ),
-    Config = #data{ backend = lee_map_storage
-                  , data = #{ [foo] => true }
-                  },
-    ?assertMatch({ok, true}, lee:get(Model, Config, [foo])),
-    ?assertMatch({ok, 42}, lee:get(Model, Config, [bar])),
-    ok.
-
-from_string_test() ->
-    M = base_model(),
-    ?assertMatch({ok, true},  from_string(M, lee_types:boolean(), "true")),
-    ?assertMatch({ok, false}, from_string(M, lee_types:boolean(), "false")),
-    ?assertMatch({ok, 1}, from_string(M, lee_types:boolean(), "1")),
-    ?assertMatch({ok, 1.1}, from_string(M, lee_types:boolean(), "1.1")),
-    ?assertMatch({ok, {foo, "bar", []}}, from_string(M, lee_types:boolean(), "{foo, \"bar\", []}")),
-    ?assertMatch({error, _}, from_string(M, lee_types:boolean(), "")),
-    ?assertMatch({error, _}, from_string(M, lee_types:boolean(), ",")),
-    ok.
-
--endif.

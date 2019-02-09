@@ -10,6 +10,8 @@
         , map_with_key/2
         , get/2
         , mk_metatype_index/1
+        , match/3
+        , optional_part/2
         ]).
 
 %%====================================================================
@@ -99,10 +101,15 @@ get([Id], MF) ->
     maps:get(Id, MF);
 get([Id|Rest], MF) ->
     case maps:get(Id, MF) of
-      Map when is_map(Map) ->
-        get(Rest, Map);
-      {_, _, Children} ->
-        get(Rest, Children)
+        Map when is_map(Map) -> %% Namespace
+            get(Rest, Map);
+        {_, _, Children} -> %% Map
+            case Rest of
+                [_|Rest1] ->
+                    get(Rest1, Children);
+                [_] ->
+                    error(badkey)
+            end
     end.
 
 %% @doc Transform all MOs to fully-qualified form
@@ -159,6 +166,19 @@ mk_metatype_index(MF) ->
                        ),
     Idx.
 
+%% Checks whether two keys match or not
+-spec match(lee:model(), lee:key(), lee:key()) ->
+                   boolean().
+match(#model{model = Model}, K1, K2) ->
+    do_match(Model, K1, K2).
+
+%% Split key into optional and mandatory parts
+-spec optional_part(lee:model(), lee:key()) ->
+                   {lee:key(), lee:key()}.
+optional_part(#model{model = Model}, K) ->
+    Optional = do_optional_part(Model, K, [], []),
+    {Optional, lists:nthtail(length(Optional), K)}.
+
 %%====================================================================
 %% Internal functions
 %%====================================================================
@@ -200,7 +220,7 @@ traverse(Key, Fun, Acc0, MO0) ->
         {_, _, []} ->
             {MO, Acc1};
         {Metatype, Attrs, Children0} ->
-            {Children, Acc} = traverse(Key, Fun, Acc1, Children0),
+            {Children, Acc} = traverse(Key ++ [?children], Fun, Acc1, Children0),
             {{Metatype, Attrs, Children}, Acc}
     end.
 
@@ -219,81 +239,28 @@ desugar_mo(_, {MetaTypes, Attrs}, _) ->
 desugar_mo(_, MO = {_, _, _}, _) ->
     {MO, undefined}.
 
--ifdef(TEST).
+do_match(_, [], []) ->
+    true;
+do_match(Model, [NS|T1], [NS|T2]) when is_map(Model) ->
+    #{NS := Rest} = Model,
+    do_match(Rest, T1, T2);
+do_match({_MetaType, _Attrs, Rest}, [_|T1], [_|T2]) ->
+    do_match(Rest, T1, T2);
+do_match(_, _, _) ->
+    false.
 
--define(moc(Attr, Children), {[t1], Attr, Children}).
-
--define(moc(Attr), {[t1], Attr}).
-
--define(moc, {[], #{}, #{}}).
-
--define(model(Attr), #{ foo => ?moc(Attr#{key => [foo]})
-                      , bar =>
-                            #{ bar => ?moc(Attr#{key => [bar, bar]}, #{})
-                             }
-                      , baz => ?moc( Attr#{key => [baz]}
-                                   , #{quux => ?moc(Attr#{key => [baz, quux]}, #{})}
-                                   )
-                      }).
-
-merge_test() ->
-    ?assertMatch( {ok, #{}}
-                , merge(#{}, #{})
-                ),
-    ?assertMatch( {ok, #{foo := ?moc, bar := ?moc}}
-                , merge(#{foo => ?moc}, #{bar => ?moc})
-                ),
-    ?assertMatch( {ok, #{foo := #{ bar := ?moc
-                                 , baz := ?moc
-                                 }}}
-                , merge( #{foo => #{bar => ?moc}}
-                       , #{foo => #{baz => ?moc}}
-                       )
-                ),
-    ?assertMatch( {error, {clashing_keys, [[foo]]}}
-                , merge( #{foo => ?moc}
-                       , #{foo => ?moc, bar => ?moc}
-                       )
-                ).
-
-traverse_test() ->
-    CheckKey =
-        fun(Key, MO, Acc) ->
-                case MO of
-                    {[t1], #{key := Key}} ->
-                        ok;
-                    {[t1], #{key := Key}, _} ->
-                        ok
-                end,
-                {MO, Acc + 1}
-        end,
-    ?assertEqual( {?model(#{}), 4}
-                , traverse(CheckKey, 0, ?model(#{}))
-                ).
-
-desugar_test() ->
-    ?assertEqual( ?model(#{}) #{foo =>
-                                    ?moc(#{key => [foo]}, #{})}
-                , desugar(?model(#{}))
-                ).
-
-get_test() ->
-    ?assertEqual( ?moc(#{key => [foo]})
-                , lee_model:get([foo], ?model(#{}))
-                ),
-    ?assertEqual( ?moc(#{key => [baz, quux]}, #{})
-                , lee_model:get([baz, quux], ?model(#{}))
-                ).
-
-mk_metatype_index_test() ->
-    Expected = #{ t1 =>
-                      map_sets:from_list([[foo], [bar, bar], [baz], [baz, quux]])
-                , t2 =>
-                      map_sets:from_list([[quux]])
-                },
-    Model = desugar(?model(#{}) #{quux => {[t2], #{}}}),
-    ?assertEqual( Expected
-                , mk_metatype_index(Model)
-                ).
-
--endif.
+do_optional_part(_, [], Visited, Optional) ->
+    lists:reverse(Optional);
+do_optional_part(Model, _Key = [Node|Rest], Visited0, Optional) ->
+    case maps:get(Node, Model) of
+        NS when is_map(NS) ->
+            do_optional_part(NS, Rest, [Node|Visited0], Optional);
+        {_MetaType, _Attrs, Children} ->
+            case Rest of
+                [OptNode|Rest1] ->
+                    Visited = [OptNode, Node | Visited0],
+                    do_optional_part(Children, Rest1, Visited, Visited);
+                _ ->
+                    lists:reverse(Optional)
+            end
+    end.

@@ -43,7 +43,8 @@ put(Model, #data{backend = Backend, data = Data}, Patch) ->
          , data = Backend:put(Model, Data, Patch)
          }.
 
+%% List instances that can potentially match the pattern
 -spec list(lee:model(), lee:data(), lee:key()) ->
-                 [lee:list()].
+                 [lee:key()].
 list(Model, #data{backend = Module, data = Data}, Key) ->
     Module:list(Model, Data, Key).

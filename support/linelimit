@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+lines=$(cat src/* include/* | grep -vE '^ *(%.*)?$' | wc -l)
+echo "You've used up ${lines} lines of code out of 3000"
+[[ $lines < 3000 ]]
