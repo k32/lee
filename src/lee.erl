@@ -217,9 +217,7 @@ from_string(Model, Type = #type{id = TId}, String) ->
                            , lee:data()
                            , lee:key()
                            , map_sets:set(lee:key())
-                           ) -> {ok, Warnings :: [string()]}
-                              | {error, Errors :: [string()], Warnings :: [string()]}
-                              .
+                           ) -> {Errors :: [string()], Warnings :: [string()]}.
 validate_mt_instances(Model, Config, MetaTypeId, MOCS) ->
     #model{metamodel = Meta} = Model,
     {[metatype], Attrs, _} = lee_model:get([metatype, MetaTypeId], Meta),
