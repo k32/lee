@@ -7,7 +7,6 @@
         , metametamodel/0
         , validate_term/3
         , get/3
-        , list_instances/3
         , validate/2
         , validate_value/4
         , from_string/3
@@ -177,12 +176,6 @@ get(Model, Data, Key) ->
                     undefined
             end
     end.
-
-%% Get all MOC instances from the config:
--spec list_instances(lee:model(), data(), lee:key()) ->
-                           {ok, term()} | undefined.
-list_instances(Model, Data, Key) ->
-    error(todo).
 
 %% Validate the config against a model
 -spec validate(lee:model(), data()) ->
