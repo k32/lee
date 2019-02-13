@@ -5,13 +5,12 @@
 -include_lib("lee/include/lee_types.hrl").
 
 -define(typedef(TN, Type, TypeVars),
-        {[typedef]
-        , #{ type           => Type
-           , type_variables => TypeVars
-           , typename       => atom_to_list(?MODULE) ++ ":" ++ atom_to_list(TN)
-           }
-        , #{}
-        }).
+        #mnode{ metatypes = [typedef]
+              , metaparams = #{ type           => Type
+                              , type_variables => TypeVars
+                              , typename       => atom_to_list(?MODULE) ++ ":" ++ atom_to_list(TN)
+                              }
+              }).
 
 -lee_ignore([ignored/0]).
 -type ignored() :: string().
@@ -48,19 +47,20 @@ halpme(A) ->
     A.
 
 type_refl_test() ->
-    Model = lee:type_refl([foo, bar], [ simple/0
-                                      , simple/1
-                                      , foo_atom/0
-                                      , strings/0
-                                      , foobar/0
-                                      , my_tuple/0
-                                      , list_of_bools/0
-                                      , non_empty_list_of_bools/0
-                                      , my_int/0
-                                      , my_byte/0
-                                      , remote_types/0
-                                      , stupid_list/1
-                                      ]),
+    Model0 = lee:type_refl([foo, bar], [ simple/0
+                                       , simple/1
+                                       , foo_atom/0
+                                       , strings/0
+                                       , foobar/0
+                                       , my_tuple/0
+                                       , list_of_bools/0
+                                       , non_empty_list_of_bools/0
+                                       , my_int/0
+                                       , my_byte/0
+                                       , remote_types/0
+                                       , stupid_list/1
+                                       ]),
+    {ok, Model} = lee_model:compile([], [Model0]),
     ?assertMatch( #type{id = [foo, bar, {foo_atom, 0}]}
                 , foo_atom()
                 ),

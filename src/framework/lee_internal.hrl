@@ -4,8 +4,9 @@
 -include("lee.hrl").
 
 -record(model,
-        { metamodel        :: lee:model_fragment()
-        , model            :: lee:model_fragment()
+        { metamodel        :: lee:cooked_module()
+        , model            :: lee:cooked_module()
+        , meta_class_idx   :: #{lee:metatype() => [lee:key()]}
         }).
 
 -record(data,

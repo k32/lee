@@ -1,7 +1,7 @@
 -module(lee_model_tests).
 
 -include_lib("lee/include/lee.hrl").
--include_lib("lee/src/lee_internal.hrl").
+-include_lib("lee/src/framework/lee_internal.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -define(moc(Attr, Children), {[t1], Attr, Children}).
@@ -9,6 +9,8 @@
 -define(moc(Attr), {[t1], Attr}).
 
 -define(moc, {[], #{}, #{}}).
+
+-define(mnode, #mnode{metatypes = _}).
 
 -define(model(Attr), #{ foo => ?moc(Attr#{key => [foo]})
                       , bar =>
@@ -19,24 +21,25 @@
                                    )
                       }).
 
-merge_test() ->
-    ?assertMatch( {ok, #{}}
-                , lee_model:merge(#{}, #{})
+compile_test() ->
+    Model = ?model(#{}),
+    ?assertMatch(
+       {ok, #model{ model = #{ [foo] := #mnode{ metatypes = [t1]
+                                              , metaparams = #{key := [foo]}
+                                              }
+                             , [bar, bar] := ?mnode
+                             , [baz, '$children', quux] := ?mnode
+                            }
+                  , metamodel = #{}
+                  , meta_class_idx = #{}
+                  }}
+                , lee_model:compile([], [Model])
                 ),
-    ?assertMatch( {ok, #{foo := ?moc, bar := ?moc}}
-                , lee_model:merge(#{foo => ?moc}, #{bar => ?moc})
+    ?assertMatch( {error, _}
+                , lee_model:compile([Model, Model], [])
                 ),
-    ?assertMatch( {ok, #{foo := #{ bar := ?moc
-                                 , baz := ?moc
-                                 }}}
-                , lee_model:merge( #{foo => #{bar => ?moc}}
-                                 , #{foo => #{baz => ?moc}}
-                                 )
-                ),
-    ?assertMatch( {error, {clashing_keys, [[foo]]}}
-                , lee_model:merge( #{foo => ?moc}
-                                 , #{foo => ?moc, bar => ?moc}
-                                 )
+    ?assertMatch( {error, _}
+                , lee_model:compile([], [Model, Model])
                 ).
 
 traverse_test() ->
@@ -54,64 +57,89 @@ traverse_test() ->
                 , lee_model:traverse(CheckKey, 0, ?model(#{}))
                 ).
 
-desugar_test() ->
-    ?assertEqual( ?model(#{}) #{foo =>
-                                    ?moc(#{key => [foo]}, #{})}
-                , lee_model:desugar(?model(#{}))
-                ).
-
 get_test() ->
-    ?assertEqual( ?moc(#{key => [foo]})
-                , lee_model:get([foo], ?model(#{}))
+    {ok, Model} = lee_model:compile([], [?model(#{})]),
+    ?assertEqual( #mnode{ metatypes = [t1]
+                        , metaparams = #{key => [foo]}
+                        }
+                , lee_model:get([foo], Model)
                 ),
-    ?assertEqual( ?moc(#{key => [baz, ?children, quux]}, #{})
-                , lee_model:get([baz, ?children, quux], ?model(#{}))
+    ?assertEqual( #mnode{ metatypes = [t1]
+                        , metaparams = #{key => [baz, ?children, quux]}
+                        }
+                , lee_model:get([baz, ?children, quux], Model)
                 ).
 
 mk_metatype_index_test() ->
     Expected = #{ t1 =>
-                      map_sets:from_list([[foo], [bar, bar], [baz], [baz, ?children, quux]])
+                      ordsets:from_list([[foo], [bar, bar], [baz], [baz, ?children, quux]])
                 , t2 =>
-                      map_sets:from_list([[quux]])
+                      ordsets:from_list([[quux]])
                 },
-    Model = lee_model:desugar(?model(#{}) #{quux => {[t2], #{}}}),
+    Model0 = ?model(#{}) #{quux => {[t2], #{}}},
+    {ok, Model} = lee_model:compile([], [Model0]),
     ?assertEqual( Expected
-                , lee_model:mk_metatype_index(Model)
+                , Model#model.meta_class_idx
                 ).
 
 match_test() ->
-    {ok, Model} = lee_model:create([], [?model(#{})]),
     ?assertMatch( true
-                , lee_model:match(Model, [foo], [foo])
-                ),
-    ?assertMatch( true
-                , lee_model:match(Model, [bar, bar], [bar, bar])
-                ),
-    ?assertMatch( false
-                , lee_model:match(Model, [bar], [bar, bar])
-                ),
-    ?assertMatch( false
-                , lee_model:match(Model, [bar, bar], [bar])
-                ),
-    ?assertMatch( false
-                , lee_model:match(Model, [bar, bar], [bar, foo])
+                , lee_model:match([foo], [foo])
                 ),
     ?assertMatch( true
-                , lee_model:match(Model, [baz, ?children, quux], [baz, 1, quux])
+                , lee_model:match([bar, bar], [bar, bar])
                 ),
     ?assertMatch( false
-                , lee_model:match(Model, [baz, ?children, quux], [baz, 1, foo])
+                , lee_model:match([bar], [bar, bar])
+                ),
+    ?assertMatch( false
+                , lee_model:match([bar, bar], [bar])
+                ),
+    ?assertMatch( false
+                , lee_model:match([bar, bar], [bar, foo])
+                ),
+    ?assertMatch( true
+                , lee_model:match([baz, ?children, quux], [baz, ?lcl(1), quux])
+                ),
+    ?assertMatch( false
+                , lee_model:match([baz, ?children, quux], [baz, ?lcl(1), foo])
                 ),
     ok.
 
 optional_part_tests() ->
-    {ok, Model} = lee_model:create([], [?model(#{})]),
     ?assertMatch( {[], [foo]}
                 , lee_model:optional_part([foo])
                 ),
     ?assertMatch( {[], [bar, bar]}
-                , lee_model:optional_part(Model, [bar, bar])
+                , lee_model:optional_part([bar, bar])
                 ),
     ?assertMatch( {[baz, ?children], [quux]}
-                , lee_model:optional_part(Model, [baz, ?children, quux])
+                , lee_model:optional_part([baz, ?children, quux])
+                ).
+
+scoped_traverse_test() ->
+    Model = #{ foo => ?moc({}, #{ bar => ?moc
+                                , baz => ?moc({}, #{quux => ?moc})
+                                })
+             , bar => ?moc({}, #{ foo => ?moc })
+             },
+    CheckScope =
+        fun(Key, MO, Acc, Scope) ->
+                [Self | Tail] = lists:reverse(Key),
+                ?assertEqual(Scope, Tail),
+                {MO, Acc + 1, [?children, Self|Scope]}
+        end,
+    ?assertEqual( {Model, 6}
+                , lee_model:traverse(CheckScope, 0, [], Model)
+                ).
+
+split_key_test() ->
+    ?assertMatch( {[], [foo, bar]}
+                , lee_model:split_key([foo, bar])
+                ),
+    ?assertMatch( {[foo, bar, ?children], [quux]}
+                , lee_model:split_key([foo, bar, ?children, quux])
+                ),
+    ?assertMatch( {[foo, ?children, bar, ?children], [quux]}
+                , lee_model:split_key([foo, ?children, bar, ?children, quux])
                 ).

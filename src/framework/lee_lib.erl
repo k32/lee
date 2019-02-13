@@ -1,6 +1,7 @@
 -module(lee_lib).
 
 -export([ parse_erl_term/1
+        , format/2
         ]).
 
 parse_erl_term(String) ->
@@ -16,3 +17,7 @@ parse_erl_term(String) ->
         _ ->
             {error, "Not an erlang term"} %% TODO: Give user some clues
     end.
+
+-spec format(string(), [term()]) -> string().
+format(Fmt, Attrs) ->
+    lists:flatten(io_lib:format(Fmt, Attrs)).

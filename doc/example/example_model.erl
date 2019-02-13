@@ -1,8 +1,8 @@
 -module(example_model).
 
 -include_lib("lee/include/lee.hrl").
+-include_lib("lee/include/lee_types.hrl").
 
--lee_ignore([version/0]).
 -type version() :: string().
 
 -type checkout() :: tag | branch | commit.
@@ -15,7 +15,7 @@
                   .
 
 model() ->
-  {ok, Model} = lee_model:merge(
+  {ok, Model} = lee_model:compile([],
     [ #{ num_jobs =>
            {[value, cli_parameter, environment_variable]
            , #{ oneliner => "Maximal number of parallel jobs"
@@ -58,7 +58,7 @@ model() ->
               , type => dep_spec()
               }}
       }
-    , lee_type_refl([tendon_types], [dep_spec/0])
+    , lee:type_refl([tendon_types], [dep_spec/0])
       %% Just for reference, define a type manually instead of using reflection:
     , lee:namespace([tendom_types]
                    , #{ version =>

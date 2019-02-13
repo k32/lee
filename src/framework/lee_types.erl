@@ -52,8 +52,6 @@
         , print_type/2
         ]).
 
--type validate_result() :: ok | {error, term()}.
-
 %%====================================================================
 %% Types
 %%====================================================================
@@ -108,30 +106,30 @@ union([A, B|T]) ->
                , T
                ).
 
--spec validate_union( lee:model_fragment()
+-spec validate_union( lee:module()
                     , lee:type()
                     , term()
-                    ) -> validate_result().
+                    ) -> lee:validate_result().
 validate_union(Model, #type{parameters = [A, B]}, Term) ->
     case lee:validate_term(Model, A, Term) of
-        ok ->
-            ok;
-        {error, _} ->
+        {ok, _} ->
+            {ok, []};
+        {error, _, _} ->
             case lee:validate_term(Model, B, Term) of
-                ok ->
-                    ok;
-                {error, _} ->
+                {ok, _} ->
+                    {ok, []};
+                {error, _, _} ->
                     Msg = format( "Expected ~s | ~s, got ~p"
                                 , [ print_type(Model, A)
                                   , print_type(Model, B)
                                   , Term
                                   ]
                                 ),
-                    {error, Msg}
+                    {error, [Msg], []}
             end
     end.
 
--spec print_union(lee:model_fragment(), lee:type()) ->
+-spec print_union(lee:module(), lee:type()) ->
                          iolist().
 print_union(Model, #type{parameters = [A, B]}) ->
     [print_type_(Model, A), " | ", print_type_(Model, B)].
@@ -144,26 +142,25 @@ boolean() ->
 integer() ->
     range(neg_infinity, infinity).
 
--spec validate_integer( lee:model_fragment()
+-spec validate_integer( lee:module()
                       , lee:type()
                       , term()
-                      ) -> validate_result().
+                      ) -> lee:validate_result().
 validate_integer(Model, Self = #type{refinement = #{range := {A, B}}}, Term) ->
     try
         is_integer(Term) orelse throw(badint),
         A =:= neg_infinity orelse Term >= A orelse throw(badint),
         B =:= infinity     orelse Term =< B orelse throw(badint),
-        ok
+        {ok, []}
     catch
         badint ->
-            {error, format( "Expected ~s, got ~p"
-                          , [print_type(Model, Self), Term]
-                          )}
+            Err = format("Expected ~s, got ~p", [print_type(Model, Self), Term]),
+            {error, [Err], []}
     end.
 
--spec print_integer(lee:model_fragment(), lee:type()) ->
+-spec print_integer(lee:module(), lee:type()) ->
                          iolist().
-print_integer(Model, #type{refinement = #{range := Range}}) ->
+print_integer(_Model, #type{refinement = #{range := Range}}) ->
     case Range of
         {neg_infinity, infinity} ->
             "integer()";
@@ -199,70 +196,70 @@ string() ->
 float() ->
     ?te([]).
 
--spec validate_float( lee:model_fragment()
+-spec validate_float( lee:module()
                     , lee:type()
                     , term()
-                    ) -> validate_result().
+                    ) -> lee:validate_result().
 validate_float(_, _, Term) ->
     if is_float(Term) ->
-            ok;
+            {ok, []};
        true ->
-            {error, format("Expected float(), got ~p", [Term])}
+            {error, [format("Expected float(), got ~p", [Term])], []}
     end.
 
 -spec atom() -> lee:type().
 atom() ->
     ?te([]).
 
--spec validate_atom( lee:model_fragment()
+-spec validate_atom( lee:module()
                    , lee:type()
                    , term()
-                   ) -> validate_result().
+                   ) -> lee:validate_result().
 validate_atom(_, _, Term) ->
     if is_atom(Term) ->
-            ok;
+            {ok, []};
        true ->
-            {error, format("Expected atom(), got ~p", [Term])}
+            {error, [format("Expected atom(), got ~p", [Term])], []}
     end.
 
 -spec binary() -> lee:type().
 binary() ->
     ?te([]).
 
--spec validate_binary( lee:model_fragment()
+-spec validate_binary( lee:module()
                      , lee:type()
                      , term()
-                     ) -> validate_result().
+                     ) -> lee:validate_result().
 validate_binary(_, _, Term) ->
     if is_binary(Term) ->
-            ok;
+            {ok, []};
        true ->
-            {error, format("Expected binary(), got ~p", [Term])}
+            {error, [format("Expected binary(), got ~p", [Term])], []}
     end.
 
 -spec tuple() -> lee:type().
 tuple() ->
     ?te([]).
 
--spec validate_any_tuple( lee:model_fragment()
+-spec validate_any_tuple( lee:module()
                         , lee:type()
                         , term()
-                        ) -> validate_result().
+                        ) -> lee:validate_result().
 validate_any_tuple(_, _, Term) ->
     if is_tuple(Term) ->
-            ok;
+            {ok, []};
        true ->
-            {error, format("Expected tuple(), got ~p", [Term])}
+            {error, [format("Expected tuple(), got ~p", [Term])], []}
     end.
 
 -spec tuple([lee:type()]) -> lee:type().
 tuple(Params) ->
     ?te(Params).
 
--spec validate_tuple( lee:model_fragment()
+-spec validate_tuple( lee:module()
                     , lee:type()
                     , term()
-                    ) -> validate_result().
+                    ) -> lee:validate_result().
 validate_tuple(Model, Self = #type{parameters = Params}, Term) ->
     try
         is_tuple(Term)
@@ -272,21 +269,23 @@ validate_tuple(Model, Self = #type{parameters = Params}, Term) ->
             orelse throw(badtuple),
         lists:zipwith( fun(Type, Val) ->
                                %% TODO: make better error message
-                               lee:validate_term(Model, Type, Val) =:= ok
-                                   orelse throw(badtuple)
+                               case lee:validate_term(Model, Type, Val) of
+                                   {ok, _} -> ok;
+                                   _       -> throw(badtuple)
+                               end
                        end
                      , Params
                      , List
                      ),
-        ok
+        {ok, []}
     catch
         badtuple ->
-            {error, format( "Expected ~s, got ~p"
-                          , [print_type(Model, Self), Term]
-                          )}
+            {error, [format( "Expected ~s, got ~p"
+                           , [print_type(Model, Self), Term]
+                           )], []}
     end.
 
--spec print_tuple(lee:model_fragment(), lee:type()) ->
+-spec print_tuple(lee:module(), lee:type()) ->
                              iolist().
 print_tuple(Model, #type{parameters = Params}) ->
     PS = [print_type_(Model, I) || I <- Params],
@@ -300,12 +299,12 @@ term() ->
 any() ->
     term().
 
--spec validate_term( lee:model_fragment()
+-spec validate_term( lee:module()
                    , lee:type()
                    , term()
-                   ) -> validate_result().
+                   ) -> lee:validate_result().
 validate_term(_, _, _) ->
-    ok.
+    {ok, []}.
 
 -spec list() -> lee:type().
 list() ->
@@ -320,10 +319,10 @@ list(Type) ->
 nonempty_list(Type) ->
     ?te(list, 1, #{non_empty => true}, [Type]).
 
--spec validate_list( lee:model_fragment()
+-spec validate_list( lee:module()
                    , lee:type()
                    , term()
-                   ) -> validate_result().
+                   ) -> lee:validate_result().
 validate_list( Model
              , Self = #type{ refinement = #{non_empty := NonEmpty}
                            , parameters = [Param]
@@ -334,24 +333,24 @@ validate_list( Model
         is_list(Term) orelse throw(badlist),
         not(NonEmpty) orelse length(Term) > 0 orelse throw(badlist),
         validate_list_(Model, Param, Term),
-        ok
+        {ok, []}
     catch
         {badelem, Elem} ->
-            {error, format( "Expected ~s, got ~p in ~s"
-                          , [ print_type(Model, Param)
-                            , Elem
-                            , print_type(Model, Self)
-                            ]
-                          )};
+            {error, [format( "Expected ~s, got ~p in ~s"
+                           , [ print_type(Model, Param)
+                             , Elem
+                             , print_type(Model, Self)
+                             ]
+                           )], []};
         badlist ->
-            {error, format( "Expected ~s, got ~p"
-                          , [ print_type(Model, Self)
-                            , Term
-                            ]
-                          )}
+            {error, [format( "Expected ~s, got ~p"
+                           , [ print_type(Model, Self)
+                             , Term
+                             ]
+                           )], []}
     end.
 
--spec print_list(lee:model_fragment(), lee:type()) ->
+-spec print_list(lee:module(), lee:type()) ->
                              iolist().
 print_list(Model, #type{ refinement = #{non_empty := NonEmpty}
                        , parameters = [Par]
@@ -368,10 +367,10 @@ print_list(Model, #type{ refinement = #{non_empty := NonEmpty}
 map(K, V) ->
     ?te([K, V]).
 
--spec validate_map( lee:model_fragment()
+-spec validate_map( lee:module()
                   , lee:type()
                   , term()
-                  ) -> validate_result().
+                  ) -> lee:validate_result().
 validate_map( Model
             , Self = #type{parameters = [KeyT, ValueT]}
             , Term
@@ -379,27 +378,31 @@ validate_map( Model
     try
         is_map(Term) orelse throw(badmap),
         [begin
-             lee:validate_term(Model, KeyT, K) =:= ok
-                 orelse throw(badmap),
-             lee:validate_term(Model, ValueT, V) =:= ok
-                 orelse throw({badval, K, V})
+             case lee:validate_term(Model, KeyT, K) of
+                 {ok, _} -> ok;
+                 _       -> throw(badmap)
+             end,
+             case lee:validate_term(Model, ValueT, V) of
+                 {ok, _} -> ok;
+                 _       -> throw({badval, K, V})
+             end
          end
          || {K, V} <- maps:to_list(Term)],
-        ok
+        {ok, []}
     catch
         {badval, Key, Val} ->
-            {error, format( "Expected ~s, but key ~p got value ~p instead"
-                          , [ print_type(Model, Self)
-                            , Key
-                            , Val
-                            ]
-                          )};
+            {error, [format( "Expected ~s, but key ~p got value ~p instead"
+                           , [ print_type(Model, Self)
+                             , Key
+                             , Val
+                             ]
+                           )], []};
         badmap ->
-            {error, format( "Expected ~s, got ~p"
-                          , [ print_type(Model, Self)
-                            , Term
-                            ]
-                          )}
+            {error, [format( "Expected ~s, got ~p"
+                           , [ print_type(Model, Self)
+                             , Term
+                             ]
+                           )], []}
     end.
 
 %% "Literal" map
@@ -411,10 +414,10 @@ exact_map(Spec) ->
        , []
        ).
 
--spec validate_exact_map( lee:model_fragment()
+-spec validate_exact_map( lee:module()
                         , lee:type()
                         , term()
-                        ) -> validate_result().
+                        ) -> lee:validate_result().
 validate_exact_map( Model
                   , Self = #type{refinement = Attr}
                   , Term
@@ -424,12 +427,14 @@ validate_exact_map( Model
      } = Attr,
     try
         is_map(Term) orelse throw(badmap),
-        Mandatory = map_sets:from_list(Mandatory0),
+        Mandatory = ordsets:from_list(Mandatory0),
         maps:map( fun(K, Type) ->
-                          case {Term, map_sets:is_element(K, Mandatory)} of
+                          case {Term, ordsets:is_element(K, Mandatory)} of
                               {#{K := Val}, _} ->
-                                  lee:validate_term(Model, Type, Val) =:= ok
-                                      orelse throw({badval, K, Val, Type});
+                                  case lee:validate_term(Model, Type, Val) of
+                                      {ok, []} -> ok;
+                                      _        -> throw({badval, K, Val, Type})
+                                  end;
                               {_, true} ->
                                   throw({badkey, K});
                               {_, false} ->
@@ -438,31 +443,32 @@ validate_exact_map( Model
                   end
                 , Spec
                 ),
-        ok
+        {ok, []}
     catch
         {badval, Key, Val, ValType} ->
-            {error, format( "Expected ~s in key ~p of ~s, got ~p"
-                          , [ print_type(Model, ValType)
-                            , Key
-                            , print_type(Model, Self)
-                            , Val
-                            ]
-                          )};
+            {error, [format( "Expected ~s in key ~p of ~s, got ~p"
+                           , [ print_type(Model, ValType)
+                             , Key
+                             , print_type(Model, Self)
+                             , Val
+                             ]
+                           )], []};
         {badkey, Key} ->
-            {error, format( "Missing key(s) ~p in ~s"
-                          , [ Term
-                            , print_type(Model, Self)
-                            ]
-                          )};
+            {error, [format( "Missing key(s) ~p in ~p, expected ~s"
+                           , [ Key
+                             , Term
+                             , print_type(Model, Self)
+                             ]
+                           )], []};
         badmap ->
-            {error, format( "Expected ~s, got ~p"
-                          , [ print_type(Model, Self)
-                            , Term
-                            ]
-                          )}
+            {error, [format( "Expected ~s, got ~p"
+                           , [ print_type(Model, Self)
+                             , Term
+                             ]
+                           )], []}
     end.
 
--spec print_exact_map(lee:model_fragment(), lee:type()) ->
+-spec print_exact_map(lee:module(), lee:type()) ->
                              iolist().
 print_exact_map(Model, #type{refinement = #{exact_map_spec := Spec}}) ->
     %% FIXME: Wrong!
@@ -478,7 +484,7 @@ print_exact_map(Model, #type{refinement = #{exact_map_spec := Spec}}) ->
 number() ->
     union(integer(), float()).
 
--spec print_type_(lee:model_fragment(), lee:type()) -> iolist().
+-spec print_type_(lee:module(), lee:type()) -> iolist().
 print_type_(_, {var, Var}) ->
     io_lib:format("_~w", [Var]);
 print_type_(_, Atom) when is_atom(Atom) ->
@@ -487,7 +493,9 @@ print_type_(_, Integer) when is_integer(Integer) ->
     integer_to_list(Integer);
 print_type_(Model, Type) ->
     #type{id = TypeId, parameters = TypeParams} = Type,
-    {Meta, Attrs, _} = lee_model:get(TypeId, Model),
+    #mnode{ metatypes = Meta
+          , metaparams = Attrs
+          } = lee_model:get(TypeId, Model),
     case Attrs of
         #{print := Print} ->
             Print(Model, Type);
@@ -506,7 +514,7 @@ print_type_(Model, Type) ->
             []
     end.
 
--spec print_type(lee:model_fragment(), lee:type()) -> string().
+-spec print_type(lee:module(), lee:type()) -> string().
 print_type(Model, Type) ->
     lists:flatten(print_type_(Model, Type)).
 
@@ -521,6 +529,9 @@ validate_list_(_, _, []) ->
     ok;
 validate_list_(Model, Param, [Term|Tail]) ->
     is_list(Tail) orelse throw(badlist),
-    lee:validate_term(Model, Param, Term) =:= ok
-        orelse throw({badelem, Term}),
-    validate_list_(Model, Param, Tail).
+    case lee:validate_term(Model, Param, Term) of
+        {ok, _} ->
+            validate_list_(Model, Param, Tail);
+        _ ->
+            throw({badelem, Term})
+    end.

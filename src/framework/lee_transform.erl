@@ -264,7 +264,7 @@ do_refl_type(State0, {remote_type, Line, CallSpec}, VarVals) ->
     {AST, State}.
 
 -spec do_type_vars(integer(), [ast()]) -> [{ast_var(), integer()}].
-do_type_vars(Line, Params) ->
+do_type_vars(_Line, Params) ->
     {Result, _} =
         lists:mapfoldl( fun({var, _, Var}, N) ->
                                 {{Var, N}, N + 1}

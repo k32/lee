@@ -7,17 +7,21 @@
 -include_lib("lee/include/lee_types.hrl").
 
 -define(valid(Type, Term),
-        ?assertMatch( ok
+        ?assertMatch( {ok, _}
                     , lee:validate_term(Model, Type, Term)
                     )).
 
 -define(invalid(Type, Term),
-        ?assertMatch( {error, _}
+        ?assertMatch( {error, _, _}
                     , lee:validate_term(Model, Type, Term)
                     )).
 
+model() ->
+    {ok, Model} = lee_model:compile([], [lee:base_model()]),
+    Model.
+
 validate_concrete_atom_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(true, true),
     ?valid(false, false),
     ?invalid(foo, 1),
@@ -25,7 +29,7 @@ validate_concrete_atom_test() ->
     ?invalid(foo, bar).
 
 validate_bool_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(boolean(), true),
     ?valid(boolean(), false),
     ?invalid(boolean(), 1),
@@ -33,7 +37,7 @@ validate_bool_test() ->
     ?invalid(boolean(), foo).
 
 integer_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(integer(), -1),
     ?valid(integer(), 1000),
     ?valid(integer(), 0),
@@ -48,27 +52,27 @@ integer_test() ->
     ?invalid(non_neg_integer(), -1).
 
 union_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(number(), 1),
     ?valid(number(), 1.1),
     ?invalid(number(), []).
 
 term_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(term(), 1),
     ?valid(term(), 1.1),
     ?valid(term(), {1, 2, [], foo}),
     ?valid(term(), [foo, 1, [] | gg]).
 
 atom_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(atom(), foo),
     ?valid(atom(), bar),
     ?invalid(atom(), {}),
     ?invalid(atom(), 1).
 
 list_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(list(), []),
     ?valid(nonempty_list(integer()), [1, 2, 3]),
     ?invalid(nonempty_list(term()), []),
@@ -78,14 +82,14 @@ list_test() ->
     ?invalid(list(), [foo, bar | baz]).
 
 string_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(string(), "this is a string"),
     ?valid(string(), "(✿ ┛O‿‿O)┛彡♥   ¯\_(ツ)_/¯"),
     ?invalid(string(), "foo" ++ [bar, {}] ++ "baz"),
     ?invalid(string(), [-1, 2]).
 
 tuple_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(tuple(), {}),
     ?valid(tuple(), {foo, 1, []}),
     ?invalid(tuple(), 1),
@@ -102,14 +106,14 @@ tuple_test() ->
     ?invalid(T, {false, "1"}).
 
 binary_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     ?valid(binary(), <<>>),
     ?valid(binary(), <<"foo">>),
     ?invalid(binary(), "fooo"),
     ?invalid(binary(), 1).
 
 map_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     T = map(atom(), string()),
     ?valid(T, #{}),
     ?valid(T, #{foo => "bar"}),
@@ -122,7 +126,7 @@ map_test() ->
                  }).
 
 exact_map_test() ->
-    Model = lee:base_model(),
+    Model = model(),
     T = exact_map(#{ foo => boolean()
                    , bar => string()
                    }),
@@ -148,7 +152,7 @@ typedef_test() ->
                    , #{}
                    }
               },
-    {ok, Model} = lee_model:merge(Model0, lee:base_model()),
+    {ok, Model} = lee_model:compile([], [Model0, lee:base_model()]),
     T = StupidList(union(integer(), foo)),
     ?valid(T, nil),
     ?valid(T, {1, nil}),
@@ -163,11 +167,11 @@ typedef_2_test() ->
     Model0 = #{foo => {[typedef]
                       , #{ type => {var, '1'}
                          , type_variables => ['1']
-                         , tupename => "foo"
+                         , typename => "foo"
                          }
                       , #{}
                       }},
-    {ok, Model} = lee_model:merge(Model0, lee:base_model()),
+    {ok, Model} = lee_model:compile([], [Model0, lee:base_model()]),
     T = fun(A) -> #type{id = [foo], parameters = [A]} end,
     ?valid(T(boolean()), true),
     ?valid(T(boolean()), false),

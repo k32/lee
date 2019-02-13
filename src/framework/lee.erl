@@ -8,17 +8,19 @@
         , validate_term/3
         , get/3
         , validate/2
-        , validate_value/4
+        , validate/3
         , from_string/3
         ]).
 
 -export_type([ node_id/0
+             , model_key/0
              , key/0
              , metatype/0
              , type/0
-             , moc/0
+             , mnode/0
              , model/0
-             , model_fragment/0
+             , lee_module/0
+             , cooked_module/0
              , properties/0
              , data/0
              ]).
@@ -31,26 +33,40 @@
 
 -type data() :: {data, _, _}.
 
--type model_fragment() :: #{node_id() => moc() | model_fragment()}.
+-type namespace() :: #{node_id() => mnode() | namespace()}.
+
+-type lee_module() :: namespace().
+
+-type cooked_module() :: #{lee:key() => #mnode{}}.
 
 -type model() :: #model{}.
 
--type validate_result() :: ok | {error, term()}.
+-type validate_result() :: {ok, Warnings :: [string()]}
+                         | {error, Errors :: [term()], Warnings :: [term()]}
+                         .
+
+-type validate_callback() :: fun((model(), data(), key(), #mnode{}) ->
+                                        validate_result()).
 
 -type metatype() :: atom().
 
--type node_id() :: term().
+-type node_id() :: atom() %% Should not begin with `$', these are reserved
+                 | tuple()
+                 | integer()
+                 .
 
--type key() :: [node_id()].
+-type model_key() :: [ node_id() | ?children ].
+
+-type key() :: [ node_id() | ?lcl(term()) | ?children ].
 
 -type properties() :: #{atom() => term()}.
 
 -type type() :: #type{} | atom() | {var, term()}.
 
-%% Managed object class
--type moc() :: {[metatype()], properties(), model_fragment()}
-             | {[metatype()], properties()} %% Shortcut for child-free MOs
-             .
+%% Model node
+-type mnode() :: {[metatype()], properties(), module()}
+               | {[metatype()], properties()} %% Shortcut for child-free MOs
+               .
 
 %%====================================================================
 %% Macros
@@ -77,8 +93,8 @@
 %%====================================================================
 
 %% @doc Put model fragment in a namespace
--spec namespace(lee:key(), lee:model_fragment()) ->
-                       lee:model_fragment().
+-spec namespace(lee:key(), lee:module()) ->
+                       lee:module().
 namespace(Key, M) ->
     lists:foldl( fun(NodeId, Acc) ->
                          #{NodeId => Acc}
@@ -88,7 +104,7 @@ namespace(Key, M) ->
                ).
 
 %% @doc Model fragment containing base types.
--spec base_model() -> lee:model_fragment().
+-spec base_model() -> lee:module().
 base_model() ->
     namespace([lee, base_types]
              , #{ ?typedef(union,      2, validate_union,     ?print(print_union)     )
@@ -107,47 +123,46 @@ base_model() ->
 
 %% @doc Model fragment containing basic configuration validation
 %% metaclasses
--spec base_metamodel() -> lee:model_fragment().
+-spec base_metamodel() -> lee:module().
 base_metamodel() ->
     Model = namespace([metatype]
                      , #{ value =>
                               {[metatype]
-                              , #{validate_mo => fun validate_value/4}
+                              , #{validate_node => fun validate_value/4}
                               }
                         , map => {[metatype] , #{}}
                         , type => {[metatype] , #{}}
                         , typedef => {[metatype] , #{}}
                         }
                      ),
-    {ok, Val} = lee_model:merge( Model
-                               , base_model()
-                               ),
+    {ok, Val} = lee_model:merge([Model, base_model()]),
     Val.
 
 %% @doc A model validating metamodels
--spec metametamodel() -> lee:model_fragment().
+-spec metametamodel() -> lee:module().
 metametamodel() ->
     MetaModel = #{
                  },
     {ok, Result} = lee_model:merge([MetaModel, base_model()]),
     Result.
 
--spec validate_term( lee:model_fragment()
+-spec validate_term( lee:model()
                    , lee:type()
                    , term()
-                   ) -> validate_result().
+                   ) -> lee_types:validate_result().
 validate_term(_Model, Atom, Term) when is_atom(Atom) ->
     case Term of
         Atom ->
-            ok;
+            {ok, []};
         _ ->
-            {error, format( "Expected ~p, got ~p"
-                          , [Atom, Term]
-                          )}
+            Err = lee_lib:format("Expected ~p, got ~p", [Atom, Term]),
+            {error, [Err], []}
     end;
 validate_term(Model, Type = #type{id = TypeName, parameters = Params}, Term) ->
-    {Meta, Attr1, _} = lee_model:get(TypeName, Model),
-    case {lists:member(type, Meta), lists:member(typedef, Meta)} of
+    #mnode{ metatypes = Meta
+          , metaparams = Attr1
+          } = lee_model:get(TypeName, Model),
+    case {ordsets:is_element(type, Meta), ordsets:is_element(typedef, Meta)} of
         {true, false} ->
             #{validate := Fun} = Attr1,
             Fun(Model, Type, Term);
@@ -160,38 +175,48 @@ validate_term(Model, Type = #type{id = TypeName, parameters = Params}, Term) ->
             validate_term(Model, Type2, Term)
     end.
 
-%% Get a `value' from the config:
--spec get(lee:model(), data(), lee:key()) ->
-                 {ok, term()} | undefined.
+%% @doc Get a value from the config:
+-spec get(lee:model(), data(), lee:key()) -> term().
 get(Model, Data, Key) ->
-    case lee_storage:get(Model, Data, Key) of
+    case lee_storage:get(Key, Data) of
         {ok, Val} ->
-            {ok, Val};
+            Val;
         undefined ->
-            {MetaTypes, Attrs, _} = lee_model:get(Key, Model#model.model),
+            MKey = lee_model:get_model_key(Key),
+            #mnode{ metatypes = MetaTypes
+                  , metaparams = Attrs
+                  } = lee_model:get(MKey, Model),
             case Attrs of
                 #{default := Val} ->
-                    {ok, Val};
+                    Val;
                 _ ->
-                    undefined
+                    %% Data shouldn't have passed validation without
+                    %% the default, so just crash here
+                    error({missing_data, Key})
             end
     end.
 
-%% Validate the config against a model
--spec validate(lee:model(), data()) ->
-                            {ok, Warnings :: [string()]}
-                          | {error, Errors :: [string()], Warnings :: [string()]}
-                          .
-validate(Model, Config) ->
-    ModelIdx = lee_model:mk_metatype_index(Model#model.model),
+%% Validate all values against the model
+-spec validate(lee:model(), data()) -> validate_result().
+validate(Model, Data) ->
+    validate([value, map], Model, Data).
+
+%% Validate all instances of certain metatypes against the model
+-spec validate([metatype()] | all, lee:model(), data()) -> validate_result().
+validate(MetaTypes, Model, Data) ->
+    ModelIdx0 = Model#model.meta_class_idx,
+    ModelIdx = case MetaTypes of
+                   all -> ModelIdx0;
+                   L   -> maps:with(L, ModelIdx0)
+               end,
     {Errors, Warnings} =
-        lists:foldl( fun({MT, MOCS}, {Errors0, Warnings0}) ->
-                             {Errors1, Warnings1} = validate_mt_instances(Model, Config, MT, MOCS),
-                             {Errors1 ++ Errors0, Warnings1 ++ Warnings0}
-                     end
-                   , {[], []}
-                   , maps:to_list(ModelIdx)
-                   ),
+        maps:fold( fun(MetaType, Nodes, {Err0, Warn0}) ->
+                           {Err1, Warn1} = validate_nodes(Model, Data, MetaType, Nodes),
+                           {Err1 ++ Err0, Warn1 ++ Warn0}
+                   end
+                 , {[], []}
+                 , ModelIdx
+                 ),
     case Errors of
         [] ->
             {ok, Warnings};
@@ -199,10 +224,10 @@ validate(Model, Config) ->
             {error, Errors, Warnings}
     end.
 
--spec from_string(lee:model_fragment(), lee:type(), string()) ->
+-spec from_string(lee:module(), lee:type(), string()) ->
                          {ok, term()} | {error, string()}.
 from_string(Model, Type = #type{id = TId}, String) ->
-    {_, Attrs, _} = lee_model:get(TId, Model),
+    #mnode{metaparams = Attrs} = lee_model:get(TId, Model),
     Fun = maps:get( read
                   , Attrs
                   , fun(_, _, S) -> lee_lib:parse_erl_term(S) end
@@ -213,78 +238,76 @@ from_string(Model, Type = #type{id = TId}, String) ->
 %% Internal functions
 %%====================================================================
 
--spec validate_mt_instances( lee:model()
-                           , lee:data()
-                           , lee:key()
-                           , map_sets:set(lee:key())
-                           ) -> {Errors :: [string()], Warnings :: [string()]}.
-validate_mt_instances(Model, Config, MetaTypeId, MOCS) ->
+%% Validate all nodes belonging to a metatype
+-spec validate_nodes( lee:model()
+                    , lee:data()
+                    , atom() | integer() | tuple()
+                    , ordsets:set(lee:model_key())
+                    ) -> {[string()], [string()]}.
+validate_nodes(Model, Data, MetaTypeId, Nodes) ->
     #model{metamodel = Meta} = Model,
-    {[metatype], Attrs, _} = lee_model:get([metatype, MetaTypeId], Meta),
-    Validate = maps:get( validate_mo
-                       , Attrs
-                       , fun(_,_,_,_) -> {[], []} end
-                       ),
-    GlobalValidate = maps:get(meta_global_validate, Attrs, fixme),
-    lists:foldl( fun(MOCId, {E0, W0}) ->
-                         {E1, W1} = validate_moc_instances( Model
-                                                          , Config
-                                                          , Validate
-                                                          , MOCId
-                                                          ),
-                         {E1 ++ E0, W1 ++ W0}
-                 end
-               , {[], []}
-               , map_sets:to_list(MOCS)
-               ).
+    #mnode{metaparams = Attrs} = lee_model:get([metatype, MetaTypeId], Meta),
+    ValidateFun = maps:get( validate_node
+                          , Attrs
+                          , fun(_, _, _, _) -> {[], []} end
+                          ),
+    ordsets:fold( fun(NodeId, {E0, W0}) ->
+                          {E1, W1} = validate_node(Model, Data, NodeId, ValidateFun),
+                          {E1 ++ E0, W1 ++ W0}
+                  end
+                , {[], []}
+                , Nodes
+                ).
 
--spec validate_moc_instances( lee:model()
-                            , lee:data()
-                            , fun()
-                            , lee:key()
-                            ) -> {[string()], [string()]}.
-validate_moc_instances(Model = #model{model = MF}, Config, Validate, MOCId) ->
-    MOC = lee_model:get(MOCId, MF),
-    Validate(Model, Config, MOCId, MOC).
-
-validate_value(Model, Data, MOCId, {_, Attrs, _}) ->
-    Type = maps:get(type, Attrs),
-    Mandatory = maps:get(mandatory, Attrs, false),
-    Instances = case lee_model:optional_part(Model, MOCId) of
-                    {[], MOCId} ->
-                        [MOCId];
-                    {Optional, Required} ->
-                        [I ++ Required || I <- lee_storage:list(Model, Data, Optional)]
+-spec validate_node( lee:model()
+                   , lee:data()
+                   , lee:key()
+                   , validate_callback()
+                   ) -> {[string()], [string()]}.
+validate_node(Model, Data, NodeId, ValidateFun) ->
+    MNode = lee_model:get(NodeId, Model),
+    Instances = case lee_model:split_key(NodeId) of
+                    {[], _} ->
+                        [NodeId];
+                    {Base, Required} ->
+                        [I ++ Required || I <- lee_storage:list(Base, Data)]
                 end,
     lists:foldl( fun(Id, {Err0, Warn0}) ->
-                         {Err1, Warn1} = validate_instance(Model, Data, Id, Mandatory, Type),
+                         {Err1, Warn1} = ValidateFun(Model, Data, Id, MNode),
                          {Err1 ++ Err0, Warn1 ++ Warn0}
                  end
                , {[], []}
                , Instances
                ).
 
-validate_instance(Model, Data, MOIid, Mandatory, Type) ->
-    case {get(Model, Data, MOIid), Mandatory} of
+%% Validate nodes of `value' metatype
+-spec validate_value( lee:model()
+                    , lee:data()
+                    , lee:key()
+                    , #mnode{}
+                    ) -> {[string()], [string()]}.
+validate_value(Model, Data, Key, #mnode{metaparams = Attrs}) ->
+    Type = maps:get(type, Attrs),
+    Default = case Attrs of
+                  #{default := Default0} ->
+                      {ok, Default0};
+                  _ ->
+                      undefined
+              end,
+    case {lee_storage:get(Key, Data), Default} of
         {{ok, Term}, _} ->
-            case validate_term(Model#model.model, Type, Term) of
-                ok ->
-                    {[], []};
-                {error, Err} ->
-                    {[Err], []}
+            case validate_term(Model, Type, Term) of
+                {ok, Warn} ->
+                    {[], Warn};
+                {error, Err, Warn} ->
+                    {Err, Warn}
             end;
-        {undefined, false} ->
+        {undefined, {ok, _}} ->
             {[], []};
-        {undefined, true} ->
-            Err = format( "Mandatory value ~p is missing in the config"
-                        , [MOIid]
-                        ),
+        {undefined, undefined} ->
+            Err = lee_lib:format("Mandatory value ~p is missing in the config", [Key]),
             {[Err] , []}
     end.
-
-%% TODO get rid of duplicated functions and types
-format(Fmt, Attrs) ->
-    lists:flatten(io_lib:format(Fmt, Attrs)).
 
 -spec subst_type_vars(lee:type(), map()) -> lee:type().
 subst_type_vars(Atom, _) when is_atom(Atom) ->

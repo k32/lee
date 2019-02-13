@@ -129,7 +129,7 @@ main(Config) ->
     ModelFragments = [lee:base_model(), MyModel],
 
     %% Merge model and metamodel fragments, creating a model
-    {ok, Model} = lee_model:create(MetamodelFragments, ModelFragments),
+    {ok, Model} = lee_model:compile(MetamodelFragments, ModelFragments),
     %% Now we can verify `Config' against the model:
     case lee:validate(Model, Config) of
       {ok, _Warnings} ->
@@ -179,7 +179,7 @@ And merge it with some new metamodels:
     ModelFragments = [lee:base_model(), MyModel],
 
     %% Merge model and metamodel fragments, creating a model
-    {ok, Model} = lee_model:create(MetamodelFragments, ModelFragments),
+    {ok, Model} = lee_model:compile(MetamodelFragments, ModelFragments),
 #+END_SRC
 
 Reading the config is done like this:
@@ -202,10 +202,10 @@ easily transformed to manpages and what not. TBD
 
 * Demo application
 
-[[file:src/demo.erl]] contains a simple application that reads some
-environment variables and CLI options, then uses this data to open a
-file containing erlang terms, which then get validated against a
-model.
+[[file:doc/examples/demo.erl]] contains a simple application that reads
+some environment variables and CLI options, then uses this data to
+open a file containing erlang terms, which then get validated against
+a model.
 
 It's completely useless and just demonstrates that /Lee/ library
 (somewhat) works.
@@ -227,3 +227,23 @@ Metamodels validate user models. TBD
 
 This library is named after Tsung-Dao Lee, a physicist who predicted
 P-symmetry violation together with Chen-Ning Yang.
+
+* Design goals
+** Composability
+
+Be a library rather than framework. Don't enforce ways of
+working. Some example use cases:
+
+ - Safe and consistent configs. Lee should be able to interwork with
+   mnesia-like DBs
+ - On the other side configuration of the database itself may use Lee,
+   so Lee itself should not rely on transactions after all
+
+** Speed
+
+Tl;dr: getting values from config should be very fast, but updating
+and validating config may be slow.
+
+It should be possible to use Lee in hotspots. It means any call to
+=lee:get= should be theoretically possible to implement using at most
+2 hashtable lookups (1 for custom data and 1 for the default value).

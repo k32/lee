@@ -1,0 +1,37 @@
+* Modelling language
+
+Informal description of Lee modelling DSL.
+
+** Node
+Node is the most basic entity of the Lee DSL.
+
+*Syntax*
+
+#+BEGIN_SRC erlang
+-type node() :: {metatype(), metaparameters()}
+              | {metatype(), metaparameters(), Children}
+              when Children :: namespace().
+#+END_SRC
+
+** Namespace
+
+Namsepaces are used to organize nodes into groups
+
+*Syntax*
+
+#+BEGIN_SRC erlang
+-type namespace() :: #{node_id() => node() | namespace()}.
+#+END_SRC
+
+=node_id()= can be any atom that doesn't begin with =$=.
+
+** DONE Key
+
+*Syntax*
+
+#+BEGIN_SRC erlang
+-type key() :: [node_id() | '$children'].
+#+END_SRC
+
+** Model fragment
+Model fragment can be seen as a module in
