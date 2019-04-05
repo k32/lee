@@ -8,20 +8,28 @@
         , map_with_key/2
         , get/2
         , get_meta/2
-        , mk_metatype_index/1
+        , get_metatype_index/2
         , match/2
         , get_model_key/1
         , merge/1
         , split_key/1
         ]).
 
+-export_type([ metatype_index/0
+             ]).
+
 -include("lee_internal.hrl").
+
+%%====================================================================
+%% Types
+%%====================================================================
+-type metatype_index() :: #{lee:metatype() => ordsets:set(lee:model_key())}.
 
 %%====================================================================
 %% API functions
 %%====================================================================
 
-%% @doc Merge multiple model and metamodoel modules to a
+%% @doc Merge multiple model and metamodel modules to a
 %% machine-friendly form.
 -spec compile([lee:lee_module()], [lee:lee_module()]) ->
                     {ok, #model{}} | {error, [term()]}.
@@ -41,7 +49,7 @@ compile(MetaModels0, Models0) ->
 %% @doc Merge multiple model fragments while checking for clashing
 %% names
 -spec merge([lee:cooked_module(), ...]) -> {ok, lee:cooked_module()}
-                                | {error, term()}.
+                                         | {error, term()}.
 merge([]) ->
     {ok, #{}};
 merge(L = [M|T]) ->
@@ -131,15 +139,6 @@ traverse(Fun, AccIn, M) ->
 traverse(Fun, Acc0, Scope0, M) ->
     traverse([], Fun, Acc0, Scope0, M).
 
-%% @doc Make an index of MOCs belonging to metatypes
--spec mk_metatype_index(lee:lee_module()) ->
-                           #{lee:metatype() => ordsets:set(lee:model_key())}.
-mk_metatype_index(MF) ->
-    maps:fold( fun mk_metatype_index_/3
-             , #{}
-             , MF
-             ).
-
 %% Transform instance key to model key
 -spec get_model_key(lee:key()) -> lee:model_key().
 get_model_key([]) ->
@@ -166,6 +165,13 @@ split_key(K) ->
                                    ),
     {lists:reverse(Base0), lists:reverse(Req0)}.
 
+
+%% @doc Get an index of mnodes belonging to metatypes
+-spec get_metatype_index(lee:metatype(), lee:model()) ->
+                                ordets:set(lee:model_key()).
+get_metatype_index(MT, #model{meta_class_idx = Idx}) ->
+    maps:get(MT, Idx, []).
+
 %%====================================================================
 %% Internal functions
 %%====================================================================
@@ -184,8 +190,7 @@ compile_module(Module) ->
                            {Node0, Acc #{Key => Node}}
                          end
                        , #{}
-                       , Module
-                       ),
+                       , Module),
     Acc.
 
 traverse(Key0, Fun, AccIn, ScopeIn, M) when is_map(M) ->
@@ -209,11 +214,15 @@ traverse(Key, Fun, Acc0, Scope0, MO0) ->
             {{Metatype, Attrs, Children}, Acc}
     end.
 
+%% @doc Make an index of MOCs belonging to metatypes
+-spec mk_metatype_index(lee:lee_module()) -> metatype_index().
+mk_metatype_index(MF) ->
+    maps:fold(fun mk_metatype_index_/3, #{}, MF).
+
 mk_metatype_index_(Key, #mnode{metatypes = MetaTypes}, Acc0) ->
     lists:foldl( fun(MT, Acc) ->
                          S0 = maps:get(MT, Acc, ordsets:new()),
                          Acc#{MT => ordsets:add_element(Key, S0)}
                  end
                , Acc0
-               , MetaTypes
-               ).
+               , MetaTypes).

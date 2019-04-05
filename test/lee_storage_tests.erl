@@ -2,8 +2,6 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include_lib("lee/include/lee.hrl").
--include_lib("lee/src/framework/lee_internal.hrl").
--include_lib("lee/include/lee_types.hrl").
 
 patch() ->
     [ {[foo, bar], 1}

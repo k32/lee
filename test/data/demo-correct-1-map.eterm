@@ -1,0 +1,5 @@
+#{ list => [foo, bar, baz]
+ , deps => [ {map_sets, {git, "https://github.com/k32/map_sets"}, {tag, "0.1.1"}}
+           , {getopt,   "1.0.1"}
+           ]
+ }.
