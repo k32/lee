@@ -2,6 +2,8 @@
 
 %% API exports
 -export([ compile/2
+        , compile_module/1
+        , decompile_module/1
         , traverse/3
         , traverse/4
         , map/2
@@ -45,6 +47,15 @@ compile(MetaModels0, Models0) ->
         {T1, T2} ->
             {error, [Err || {error, Err} <- [T1, T2]]}
     end.
+
+%% @doc Decompile cooked module back to raw state
+-spec decompile_module(lee:cooked_module()) -> lee:module().
+decompile_module(Module0) ->
+    Module1 = [{full_split_key(K), V} || {K, V} <- maps:to_list(Module0)],
+    %% Sort keys lexicographically to ensure that all children are
+    %% located immediately after the parent in the list:
+    Module2 = lists:sort(Module1),
+    decompile_module(#{}, Module2).
 
 %% @doc Merge multiple model fragments while checking for clashing
 %% names
@@ -115,9 +126,10 @@ map_with_key(Fun, M) ->
 %% @doc Recursion schema for model traversal
 -spec traverse( fun((lee:model_key(), lee:mnode(), Acc) -> {lee:mnode(), Acc})
               , Acc
-              , lee:module()
-              ) -> {lee:module(), Acc}
-              when Acc :: term().
+              , Model
+              ) -> {Model, Acc}
+              when Acc   :: term()
+                 , Model :: lee:model() | lee:cooked_module().
 traverse(Fun, AccIn, M) ->
     traverse( fun(Key, MOC0, Acc0, unused) ->
                       {MOC, Acc} = Fun(Key, MOC0, Acc0),
@@ -128,16 +140,23 @@ traverse(Fun, AccIn, M) ->
             , M
             ).
 
-%% @doc Recursion schema for scoped model traversal
+%% @doc Recursion schema for model traversal with scope
 -spec traverse( fun((lee:model_key(), lee:mnode(), Acc, Scope) -> {lee:mnode(), Acc, Scope})
               , Acc
               , Scope
-              , lee:module()
-              ) -> {lee:module(), Acc}
-              when Acc :: term()
-                 , Scope :: term().
-traverse(Fun, Acc0, Scope0, M) ->
-    traverse([], Fun, Acc0, Scope0, M).
+              , Model
+              ) -> {Model, Acc}
+              when Acc   :: term()
+                 , Scope :: term()
+                 , Model :: lee:model() | lee:module().
+traverse(Fun, Acc0, Scope0, M0 = #model{model = Module0}) ->
+    Module1 = decompile_module(Module0),
+    %% Ugly: we lose nested structure of the model during compilation,
+    %% but we need it for traversal. So we decompile it here \^////
+    {Module, Acc} = traverse(Fun, Acc0, Scope0, Module1),
+    {M0#model{model = compile_module(Module)}, Acc};
+traverse(Fun, Acc0, Scope0, Module0) ->
+    traverse([], Fun, Acc0, Scope0, Module0).
 
 %% Transform instance key to model key
 -spec get_model_key(lee:key()) -> lee:model_key().
@@ -165,6 +184,14 @@ split_key(K) ->
                                    ),
     {lists:reverse(Base0), lists:reverse(Req0)}.
 
+-spec full_split_key(lee:model_key()) -> [lee:model_key()].
+full_split_key(Key) ->
+    case lists:splitwith(fun(I) -> I =/= ?children end, Key) of
+        {A, []} ->
+            [A];
+        {A, [?children | B]} ->
+            [A | full_split_key(B)]
+    end.
 
 %% @doc Get an index of mnodes belonging to metatypes
 -spec get_metatype_index(lee:metatype(), lee:model()) ->
@@ -192,6 +219,19 @@ compile_module(Module) ->
                        , #{}
                        , Module),
     Acc.
+
+decompile_module(Acc, []) ->
+    Acc;
+decompile_module(Acc0, [{[K1], V1} | Rest0]) ->
+    #mnode{ metatypes = MTs
+          , metaparams = MPs
+          } = V1,
+    FindMyChildren = fun({[K|_], _}) -> K1 =:= K end,
+    {MyChildren0, Rest} = lists:splitwith(FindMyChildren, Rest0),
+    MyChildren1 = [{tl(K), V} || {K, V} <- MyChildren0],
+    MyChildren = decompile_module(#{}, MyChildren1),
+    Acc1 = raw_module_add_node(Acc0, K1, {MTs, MPs, MyChildren}),
+    decompile_module(Acc1, Rest).
 
 traverse(Key0, Fun, AccIn, ScopeIn, M) when is_map(M) ->
     maps:fold( fun(K, Val0, {Map0, Acc0}) ->
@@ -226,3 +266,9 @@ mk_metatype_index_(Key, #mnode{metatypes = MetaTypes}, Acc0) ->
                  end
                , Acc0
                , MetaTypes).
+
+raw_module_add_node(Module, [Key], Node) ->
+    Module #{Key => Node};
+raw_module_add_node(Module, [Key|Rest], Node) ->
+    Children = maps:get(Key, Module, #{}),
+    Module #{Key => raw_module_add_node(Children, Rest, Node)}.
