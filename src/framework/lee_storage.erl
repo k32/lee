@@ -19,6 +19,8 @@
 %% Types
 %%====================================================================
 
+-define(rose_tree, '$rose_tree').
+
 -type storage(_A) :: term().
 
 -type patch(A) :: [{set, lee:key(), A} | {rm, lee:key()}].
@@ -30,13 +32,10 @@
           backend
           %% Key-value storage for values (grants us fast `get'):
         , data
-          %% Rose tree preserving key hieararchy:
-        , keys
         }).
 
 -opaque data(A) :: #lee_tree{ backend :: module()
-                            , data    :: storage(A)
-                            , keys    :: rose_tree()
+                            , data    :: storage(A | rose_tree())
                             }.
 
 %%====================================================================
@@ -45,8 +44,8 @@
 
 -callback create(Options :: term()) -> storage(_).
 
--callback get(lee:key(), storage(Val)) -> {ok, Val}
-                                        | undefined.
+-callback get(term(), storage(Val)) -> {ok, Val}
+                                     | undefined.
 
 -callback patch(Storage, Delete, Set) -> Storage
     when Storage :: storage(Val)
@@ -58,10 +57,11 @@
 %%====================================================================
 
 -spec new(module(), map()) -> data(_).
-new(Module, Options) ->
-    #lee_tree{ backend = Module
-             , data    = Module:create(Options)
-             , keys    = #{}
+new(Backend, Options) ->
+    Data0 = Backend:create(Options),
+    Data  = Backend:patch(Data0, [], [{?rose_tree, #{}}]),
+    #lee_tree{ backend = Backend
+             , data    = Data
              }.
 
 -spec new(module()) -> data(_).
@@ -73,18 +73,19 @@ get(Key, #lee_tree{backend = Backend, data = Data}) ->
     Backend:get(Key, Data).
 
 -spec patch(data(A), patch(A)) -> data(A).
-patch(D0 = #lee_tree{backend = Backend, data = Data0, keys = Keys0}, Patch0) ->
+patch(D0 = #lee_tree{backend = Backend, data = Data0}, Patch0) ->
+    {ok, Keys0} = Backend:get(?rose_tree, Data0),
     {Delete, Set} = transform_patch(D0, Patch0),
     Keys1 = lists:foldl(fun rt_del/2, Keys0, Delete),
     Keys = lists:foldl(fun rt_add/2, Keys1, [K || {K, _} <- Set]),
-    Data = Backend:patch(Data0, Delete, Set),
+    Data = Backend:patch(Data0, Delete, [{?rose_tree, Keys} | Set]),
     D0#lee_tree{ data = Data
-               , keys = Keys
                }.
 
 %% List instances that can match the pattern
 -spec list(lee:key(), data(_)) -> [lee:key()].
-list(Pattern, #lee_tree{keys = Keys}) ->
+list(Pattern, #lee_tree{backend = Backend, data = Data}) ->
+    {ok, Keys} = Backend:get(?rose_tree, Data),
     list(Keys, [], Pattern).
 
 
@@ -106,8 +107,8 @@ fold(Fun0, Acc0, Data) ->
 fold(Fun0, Acc0, Scope0, Data) ->
     #lee_tree{ data    = Storage
              , backend = Backend
-             , keys    = Keys
              } = Data,
+    {ok, Keys} = Backend:get(?rose_tree, Storage),
     Fun = fun(Key, Acc, Scope) ->
                   case Backend:get(Key, Storage) of
                       {ok, Val} ->
@@ -179,7 +180,8 @@ rt_list_children(Parent, Tree) ->
 
 -spec transform_patch(data(A), patch(A)) ->
                              {[lee:key()], [{lee:key(), A}]}.
-transform_patch(#lee_tree{keys = Tree}, Patch) ->
+transform_patch(#lee_tree{backend = Backend, data = Data}, Patch) ->
+    {ok, Tree} = Backend:get(?rose_tree, Data),
     {Del0, Set} = separate_patch_operations(Patch, {[], []}),
     Del1 = lists:append([rt_list_children(I, Tree) || I <- Del0]),
     %% TODO: Optimize me
