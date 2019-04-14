@@ -11,6 +11,9 @@
         , fold/4
         ]).
 
+%% Internal exports:
+-export([wrap/2]).
+
 -export_type([ data/1
              , patch/1
              ]).
@@ -118,6 +121,11 @@ fold(Fun0, Acc0, Scope0, Data) ->
                   end
           end,
     rt_fold(Fun, Acc0, Scope0, Keys, []).
+
+%% Wrap a persistent storage. Hacky
+-spec wrap(module(), term()) -> data(term()).
+wrap(Backend, Blob) ->
+    #lee_tree{backend = Backend, data = Blob}.
 
 %%====================================================================
 %% Rose tree operations
