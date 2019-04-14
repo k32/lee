@@ -171,7 +171,7 @@ parse_args( #sc{ name = Name
 parse_args( #sc{ name = Name
                , positional = Pos0
                } = Scope0
-          , [{positioinal, Val}|Rest]
+          , [{positional, Val}|Rest]
           ) ->
     case Pos0 of
         [] ->
@@ -179,11 +179,10 @@ parse_args( #sc{ name = Name
                                      , [Val, Name]
                                      ),
             throw(ErrorMsg);
+        [{rest, Key, Type}] ->
+            error(not_implemented); %% TODO
         [{Position, Key, Type} | PRest] ->
-            Scope = case Position of
-                        rest -> Scope0;
-                        _    -> Scope0#sc{positional = PRest}
-                    end,
+            Scope = Scope0#sc{positional = PRest},
             maps:merge( #{Key => lee_lib:string_to_term(Type, Val)}
                       , parse_args(Scope, Rest)
                       )
@@ -230,7 +229,7 @@ add_param(Key0, Attrs, SC0) ->
        } = SC0,
     Type = maps:get(type, Attrs),
     %% Make key relative:
-    Key = Key0 -- SC0#sc.parent,
+    Key = make_relative(Key0, SC0),
     Long = case Attrs of
                #{cli_operand := L} ->
                    Long0 #{L => {Key, Type}};
@@ -249,7 +248,13 @@ add_param(Key0, Attrs, SC0) ->
 
 add_positional(Key0, Attrs, SC0 = #sc{positional = Pos0}) ->
     %% Make key relative:
-    Key = Key0 -- SC0#sc.parent,
+    Key = make_relative(Key0, SC0),
     Pos = maps:get(cli_arg_position, Attrs),
     Type = maps:get(type, Attrs),
     SC0#sc{ positional = [{Pos, Key, Type} | Pos0] }.
+
+make_relative(Key, #sc{parent = []}) ->
+    Key;
+make_relative(Key0, #sc{parent = Parent}) ->
+    [?children | Key] = Key0 -- Parent,
+    Key.

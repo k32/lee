@@ -127,23 +127,19 @@ tokenize_test() ->
     ?tok( "--foo bar --bar foo"
         , [ {long, "foo", "bar"}
           , {long, "bar", "foo"}
-          ]
-        ),
+          ]),
     ?tok( "--foo --bar foo --baz"
         , [ {long, "foo", "true"}
           , {long, "bar", "foo"}
           , {long, "baz", "true"}
-          ]
-        ),
+          ]),
     ?tok( "--foo1 -- bar"
         , [ {long, "foo1", "true"}
           , {positional, "bar"}
-          ]
-        ),
+          ]),
     ?tok( "-- --foo"
         , [ {positional, "--foo"}
-          ]
-        ),
+          ]),
     ?tok( "foo --bar 1 --baz --jobs 33 baz quux foo"
         , [ {positional, "foo"}
           , {long, "bar", "1"}
@@ -152,8 +148,7 @@ tokenize_test() ->
           , {positional, "baz"}
           , {positional, "quux"}
           , {positional, "foo"}
-          ]
-        ),
+          ]),
     ?tok("-s0 -c9", [{short, "s", "0"}, {short, "c", "9"}]),
     ?tok( "kill -9 -fml0 --foo bar -j 11 -"
         , [ {positional, "kill"}
@@ -164,8 +159,7 @@ tokenize_test() ->
           , {long, "foo", "bar"}
           , {short, "j", "11"}
           , {positional, "-"}
-          ]
-        ).
+          ]).
 
 read_cli(String) ->
     Args = string:split(String, " ", all),
@@ -209,10 +203,23 @@ global_flags_test() ->
                 ).
 
 children_test() ->
-    {ok, Data} = read_cli(", action_1 -s1 --long foo, action_2 foo bar"),
-    ?assertMatch( [[action_1, ?lcl(1)]]
+    {ok, Data} = read_cli(", action_1 -fgs1 --long foo, action_2 foo bar"),
+    %% List children
+    ?assertMatch( [[action_1, ?lcl(["foo", 1])]]
                 , lee_storage:list([action_1, ?children], Data)
                 ),
-    ?assertMatch( [[action_2, ?lcl(_)]]
+    ?assertMatch( [[action_2, ?lcl(["foo"])]]
                 , lee_storage:list([action_2, ?children], Data)
+                ),
+    ?assertMatch( {ok, true}
+                , lee_storage:get([action_1, ?lcl(["foo", 1]), flag1], Data)
+                ),
+    ?assertMatch( {ok, "foo"}
+                , lee_storage:get([action_1, ?lcl(["foo", 1]), long], Data)
+                ),
+    ?assertMatch( {ok, "foo"}
+                , lee_storage:get([action_2, ?lcl(["foo"]), posn_1], Data)
+                ),
+    ?assertMatch( {ok, "bar"}
+                , lee_storage:get([action_2, ?lcl(["foo"]), posn_2], Data)
                 ).

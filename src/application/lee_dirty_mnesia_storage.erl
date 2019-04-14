@@ -22,7 +22,7 @@ from_table(TabName) ->
 %% lee_storage callbacks
 %%====================================================================
 
-create(Options) ->
+create(_Options) ->
     error(unsupported).
 
 get(Key, TabName) ->
@@ -33,6 +33,6 @@ get(Key, TabName) ->
             undefined
     end.
 
-patch(TabName, Delete, Set) ->
+patch(_TabName, _Delete, _Set) ->
     %% Dirty patches are not allowed.
     error(unsupported).

@@ -23,6 +23,7 @@
              , cooked_module/0
              , properties/0
              , data/0
+             , patch/0
              ]).
 
 -include("lee_internal.hrl").
@@ -188,9 +189,7 @@ get(Model, Data, Key) ->
             Val;
         undefined ->
             MKey = lee_model:get_model_key(Key),
-            #mnode{ metatypes = MetaTypes
-                  , metaparams = Attrs
-                  } = lee_model:get(MKey, Model),
+            #mnode{metaparams = Attrs} = lee_model:get(MKey, Model),
             case Attrs of
                 #{default := Val} ->
                     Val;

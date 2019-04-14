@@ -47,8 +47,8 @@ make_nested_patch(Model, Parent, Children) ->
     MakeChildKey = fun(K, Acc) ->
                            case Children of
                                #{K := Val} -> [Val|Acc];
-                               _           -> throw({missing_key_element, K})
+                               _           -> error({missing_key_element, K, Children})
                            end
                    end,
     ChildKey = lists:foldl(MakeChildKey, [], KeyElems),
-    [{set, Parent ++ [ChildKey|K], V} || {K, V} <- maps:to_list(Children)].
+    [{set, Parent ++ [?lcl(ChildKey)|K], V} || {K, V} <- maps:to_list(Children)].
