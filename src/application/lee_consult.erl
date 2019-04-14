@@ -22,13 +22,13 @@ metamodel() ->
 read_to(Model, Filename, Data) ->
     case read(Model, Filename) of
         {ok, Patch} ->
-            {ok, lee_storage:put(Data, Patch)};
+            {ok, lee_storage:patch(Data, Patch)};
         Error ->
             Error
     end.
 
 -spec read(lee:model(), file:filename()) ->
-                  {ok, [{lee:key(), term()}]}
+                  {ok, lee:patch()}
                 | {error, term()}.
 read(Model, Filename) ->
     Keys = lee_model:get_metatype_index(?consult, Model),
@@ -63,7 +63,7 @@ read_val(Model, Terms, Key, Acc) ->
     FileKey = maps:get(file_key, Attrs),
     case Terms of
         #{FileKey := Val} ->
-            [{Key, Val} | Acc];
+            [{set, Key, Val} | Acc];
         #{} ->
             Acc
     end.

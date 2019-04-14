@@ -12,10 +12,11 @@ namespace_test() ->
                 , lee:namespace([foo, bar], #{baz => #{}})
                 ).
 
-run_validate(Model, Config) ->
-    Data = lee_storage:put( lee_storage:new(lee_map_storage, [])
-                          , Config
-                          ),
+run_validate(Model, Config0) ->
+    Config = [{set, K, V} || {K, V} <- maps:to_list(Config0)],
+    Data = lee_storage:patch( lee_storage:new(lee_map_storage, [])
+                            , Config
+                            ),
     catch lee:validate(Model, Data).
 
 -define(valid(Config),
@@ -79,17 +80,15 @@ get_test() ->
     {ok, Model} = lee_model:compile( [lee:base_metamodel()]
                                    , [lee:base_model(), Model2]
                                    ),
-    Config = #data{ backend = lee_map_storage
-                  , data = #{ [foo] => true
-
-                            , [baz, ?lcl(0), foo] => true
-                            , [baz, ?lcl(0), bar] => 0
-
-                            , [baz, ?lcl(1), foo] => false
-
-                            , [baz, ?lcl(0), baz, ?lcl(42), foo] => false
-                            }
-                  },
+    Patch = [ {set, [foo],                              true }
+            , {set, [baz, ?lcl(0), foo],                true }
+            , {set, [baz, ?lcl(0), bar],                0    }
+            , {set, [baz, ?lcl(1), foo],                false}
+            , {set, [baz, ?lcl(0), baz, ?lcl(42), foo], false}
+            ],
+    Config = lee_storage:patch( lee_storage:new(lee_map_storage)
+                              , Patch
+                              ),
     ?assertMatch(true, lee:get(Model, Config, [foo])),
     ?assertMatch(42, lee:get(Model, Config, [bar])),
 

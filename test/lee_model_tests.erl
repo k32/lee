@@ -41,18 +41,9 @@
 
 -define(RUN_PROP(PROP), ?RUN_PROP(PROP, ?SIZE)).
 
-compile_test() ->
+merge_test() ->
     Model = ?model(#{}),
-    ?assertMatch(
-       {ok, #model{ model = #{ [foo] := #mnode{ metatypes = [t1]
-                                              , metaparams = #{key := [foo]}
-                                              }
-                             , [bar, bar] := ?mnode
-                             , [baz, '$children', quux] := ?mnode
-                            }
-                  , metamodel = #{}
-                  , meta_class_idx = #{}
-                  }}
+    ?assertMatch( {ok, _}
                 , lee_model:compile([], [Model])
                 ),
     ?assertMatch( {error, _}
@@ -62,35 +53,52 @@ compile_test() ->
                 , lee_model:compile([], [Model, Model])
                 ).
 
+compile_test() ->
+    %% Test that traversal of raw and cooked models yield the same
+    %% results:
+    ?RUN_PROP(compile_prop).
+
+compile_prop() ->
+    RecordTrace = fun(Key, Val, Acc, Scope) ->
+                          { [{Key, Val, Scope} | Acc]
+                          , Key
+                          }
+                  end,
+    ?FORALL(Model0, model(atom(), #{}),
+            begin
+                {ok, Model1} = lee_model:compile([], [Model0]),
+                Tr0 = lists:sort(lee_model:fold(RecordTrace, [], foo, Model0)),
+                Tr1 = lists:sort(lee_model:fold(RecordTrace, [], foo, Model1)),
+                ?assertMatch(Tr0, Tr1)
+            end).
+
 traverse_test() ->
     CheckKey =
         fun(Key, MO, Acc) ->
-                case MO of
-                    {[t1], #{key := Key}} ->
-                        ok;
-                    {[t1], #{key := Key}, _} ->
-                        ok
-                end,
-                {MO, Acc + 1}
+                ?assertMatch( #mnode{ metatypes = [t1]
+                                    , metaparams = #{key := Key}
+                                    }
+                            , MO
+                            ),
+                Acc + 1
         end,
-    ?assertEqual( {?model(#{}), 4}
-                , lee_model:traverse(CheckKey, 0, ?model(#{}))
+    ?assertMatch( 4
+                , lee_model:fold(CheckKey, 0, ?model(#{}))
                 ).
 
 cooked_traverse_test() ->
     {ok, Model} = lee_model:compile([], [?model(#{})]),
     CheckKey =
         fun(Key, MO, Acc) ->
-                case MO of
-                    {[t1], #{key := Key}} ->
-                        ok;
-                    {[t1], #{key := Key}, _} ->
-                        ok
-                end,
-                {MO, Acc + 1}
+                ?assertMatch( #mnode{ metatypes = [t1]
+                                    , metaparams = #{key := Key}
+                                    }
+                            , MO
+                            ),
+                Acc + 1
         end,
-    ?assertEqual( {Model, 4}
-                , lee_model:traverse(CheckKey, 0, Model)
+    ?assertMatch( 4
+                , lee_model:fold(CheckKey, 0, Model)
                 ).
 
 get_test() ->
@@ -158,19 +166,18 @@ scoped_traverse_test_() ->
 
 scoped_traverse_prop() ->
     CheckScope =
-        fun(Key, MO = {_, MP, _}, Acc, Scope) ->
+        fun(Key, #mnode{metaparams = MP}, Acc, Scope) ->
                 #{ scope := ExpectedScope
                  , key   := ExpectedKey
                  } = MP,
                 ?assertEqual(Scope, ExpectedScope),
                 {_Base, Requered} = lee_model:split_key(Key),
                 ?assertEqual(Key, ExpectedKey),
-                {MO, Acc + 1, Scope ++ Requered ++ [?children]}
+                {Acc + 1, Scope ++ Requered ++ [?children]}
         end,
     ?FORALL(Model, model([], #{}),
             begin
-                {Model1, _Acc} = lee_model:traverse(CheckScope, 0, [], Model),
-                ?assertEqual(Model, Model1),
+                lee_model:fold(CheckScope, 0, [], Model),
                 true
             end).
 
@@ -185,19 +192,19 @@ split_key_test() ->
                 , lee_model:split_key([foo, ?children, bar, ?children, quux])
                 ).
 
-decompile_test_() ->
-    ?RUN_PROP(decompile_compile_refl).
-
-decompile_compile_refl() ->
-    ?FORALL(Model0, model(atom(), map(atom(), term())),
-            begin
-                Model1 = lee_model:compile_module(Model0),
-                Model = lee_model:decompile_module(Model1),
-                ?assertEqual( Model0
-                            , Model
-                            ),
-                true
-            end).
+full_split_key_test() ->
+    ?assertMatch( [[foo, bar, 1]]
+                , lee_model:full_split_key([foo, bar, 1])
+                ),
+    ?assertMatch( [[foo, ?children], [bar]]
+                , lee_model:full_split_key([foo, ?children, bar])
+                ),
+    ?assertMatch( [[foo, ?lcl(1)], [bar]]
+                , lee_model:full_split_key([foo, ?lcl(1), bar])
+                ),
+    ?assertMatch( [[foo, ?lcl(1)], [bar, ?children], [baz]]
+                , lee_model:full_split_key([foo, ?lcl(1), bar, ?children, baz])
+                ).
 
 %%%===================================================================
 %%% Proper generators

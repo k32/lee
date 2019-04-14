@@ -18,7 +18,7 @@ metamodel() ->
                           }
                     }}.
 
--spec read(lee:model()) -> [{lee:key(), term()}].
+-spec read(lee:model()) -> lee:patch().
 read(Model) ->
     EnvVars = lee_model:get_metatype_index(?environment_variable, Model),
     lists:foldl( fun(Key, Acc) ->
@@ -30,7 +30,7 @@ read(Model) ->
 -spec read_to(lee:model(), lee:data()) -> lee:data().
 read_to(Model, Data) ->
     Patch = read(Model),
-    lee_storage:put(Data, Patch).
+    lee_storage:patch(Data, Patch).
 
 read_val(Model, Key, Acc) ->
     #mnode{metaparams = Attrs} = lee_model:get(Key, Model),
@@ -39,5 +39,5 @@ read_val(Model, Key, Acc) ->
         false ->
             Acc;
         Value ->
-            [{Key, Value} | Acc]
+            [{set, Key, Value} | Acc]
     end.

@@ -31,13 +31,15 @@
 %% Types
 %%====================================================================
 
--type data() :: {data, _, _}.
+-type data() :: lee_storage:data(term()).
+
+-type patch() :: lee_storage:patch(term()).
 
 -type namespace() :: #{node_id() => mnode() | namespace()}.
 
 -type lee_module() :: namespace().
 
--type cooked_module() :: #{lee:key() => #mnode{}}.
+-type cooked_module() :: lee_storage:data(#mnode{}).
 
 -type model() :: #model{}.
 
@@ -130,7 +132,10 @@ base_metamodel() ->
                               {[metatype]
                               , #{validate_node => fun validate_value/4}
                               }
-                        , map => {[metatype] , #{}}
+                        , map =>
+                              {[metatype]
+                              , #{}
+                              }
                         , type => {[metatype] , #{}}
                         , typedef => {[metatype] , #{}}
                         }
