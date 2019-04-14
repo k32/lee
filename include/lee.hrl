@@ -3,6 +3,8 @@
 
 -define(children, '$children').
 
+-define(key_elements, key_elements).
+
 -define(lcl(A), {'$child', A}). %% Lee ChiLd
 
 -define(is_storage(A), (element(1, (A)) =:= lee_tree)).

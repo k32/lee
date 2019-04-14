@@ -104,6 +104,7 @@ get_test() ->
 
 from_string_test() ->
     {ok, M} = lee_model:compile([], [lee:base_model()]),
+    ?assertMatch({ok, "foo"}, lee:from_string(M, lee_types:string(), "foo")),
     ?assertMatch({ok, true},  lee:from_string(M, lee_types:boolean(), "true")),
     ?assertMatch({ok, false}, lee:from_string(M, lee_types:boolean(), "false")),
     ?assertMatch({ok, 1}, lee:from_string(M, lee_types:boolean(), "1")),

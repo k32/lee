@@ -32,8 +32,10 @@ get_test() ->
     ok = lee_mnesia_storage:patch(Data, patch()),
     ?assertMatchT({ok, 1}, lee_storage:get([foo, bar], Data)),
     ?assertMatchT({ok, 2}, lee_storage:get([bar, baz], Data)),
-    ?assertMatchT({ok, 11}, lee_storage:get([quux, ?lcl(1), foo, ?lcl(1)], Data)),
-    ?assertMatchT(undefined, lee_storage:get([quux, ?lcl(1), foo, ?lcl(3)], Data)).
+    %% Check that ensure table doesn't mess up existing data
+    Data1 = lee_mnesia_storage:ensure_table(?FUNCTION_NAME, []),
+    ?assertMatchT({ok, 11}, lee_storage:get([quux, ?lcl(1), foo, ?lcl(1)], Data1)),
+    ?assertMatchT(undefined, lee_storage:get([quux, ?lcl(1), foo, ?lcl(3)], Data1)).
 
 get_after_delete_test() ->
     application:ensure_all_started(mnesia),
