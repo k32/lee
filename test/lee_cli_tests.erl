@@ -98,7 +98,7 @@ test_model() ->
 
 -define(tok(String, Pattern),
         ?assertEqual( Pattern
-                    , lee_cli:tokenize(string:split(String, " ", all))
+                    , lee_cli:tokenize(string:tokens(String, " "))
                     )).
 
 split_commands_test() ->
@@ -162,7 +162,7 @@ tokenize_test() ->
           ]).
 
 read_cli(String) ->
-    Args = string:split(String, " ", all),
+    Args = string:tokens(String, " "),
     lee_cli:read_to(test_model(), Args, lee_storage:new(lee_map_storage)).
 
 simple_long_test() ->
