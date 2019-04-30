@@ -152,11 +152,26 @@ higher_kind_refl_test() ->
 
 -type mymap1() :: map().
 
-map_refl_test() ->
+map_0_refl_test() ->
     ?model([mymap1/0]),
     ?assertEqual( ?typedef(mymap1, map(), [])
                 , ?getm({mymap1, 0})
                 ).
+
+-type mymap2(A, B) :: #{A => B}.
+
+map_assoc_refl_test() ->
+    ?model([mymap2/2]),
+    ?assertEqual( ?typedef(mymap2, map({var, 'A'}, {var, 'B'}), ['A', 'B'])
+                , ?getm({mymap1, 0})
+                ).
+
+-type mymap3() :: #{foo := integer()}.
+
+-type mixmap(A, B) :: #{ foo := integer()
+                       , bar := atom()
+                       , K => V
+                       }.
 
 %% -----------------------------------------------------------------------------
 

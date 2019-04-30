@@ -103,7 +103,7 @@ parse_transform(Forms0, _Options) ->
                , reflected_types = #{}
                , module = Module
                },
-    %io:format(user, "AST: ~p~n", [Forms0]),
+    io:format(user, "AST: ~p~n", [Forms0]),
     {Forms1, State} = forms(Forms0, State0),
     ReflectedTypes = maps:to_list(State#s.reflected_types),
     %% export_type and export definitions are the same.

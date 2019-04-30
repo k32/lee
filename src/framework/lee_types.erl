@@ -44,11 +44,8 @@
 
         , map/0  % Import~
         , map/2  % Import~
+        , map/1  % Import~
         , validate_map/3
-
-        , exact_map/1
-        , validate_exact_map/3
-        , print_exact_map/2
 
         , number/0  % Import~
 
@@ -74,7 +71,11 @@
              , string/0
              , tuple/0
              , map/0
+             , map/2
              , number/0
+             ]).
+
+-export_type([ map_field_spec/0
              ]).
 
 %%====================================================================
@@ -93,6 +94,17 @@
         ?te(?FUNCTION_NAME, ?FUNCTION_ARITY, Attrs, Parameters)).
 -define(te(Parameters),
         ?te(?FUNCTION_NAME, ?FUNCTION_ARITY, #{}, Parameters)).
+
+%%====================================================================
+%% Types (regular, not reflected)
+%%====================================================================
+
+%% This wrapper is needed, as there is no builtin `map/2' type:
+-type map(K, V) :: #{K => V}.
+
+-type map_field_spec() :: {optional, lee:type(), lee:type()}
+                        | {optional_term, term(), lee:type()}
+                        | {mandatory, term(), lee:type()}.
 
 %%====================================================================
 %% API functions
@@ -413,12 +425,53 @@ print_list(Model, #type{ refinement = #{non_empty := NonEmpty}
 %% @doc Reflection of `map()' type
 -spec map() -> lee:type().
 map() ->
-    map(term(), term()).
+    map([{optional, term(), term()}]).
 
 %% @doc Reflection of `#{K => V}' type
 -spec map(lee:type(), lee:type()) -> lee:type().
 map(K, V) ->
-    ?te([K, V]).
+    map([{optional, K, V}]).
+
+-spec map(Params, [field_spec()]) -> lee:type().
+map(Params, FieldSpecs) ->
+    %% Keys of exact fields are traeated as literal terms:
+    ExactFields = [{Key, Type} || {T, Key, Type} <- FieldSpecs,
+                                  T =:= optional_term orelse T =:= mandatory],
+    MandatoryFields = [K || {mandatory, K, _} <- FieldSpecs],
+    %% Other keys are treated as types, requiring an ugly and slow O(N*M) validation
+    Optional = [{KeyType, ValType} || {optional, KeyType, ValType} <- FieldSpecs],
+    ?te(#{}, Params).
+
+
+    try
+        is_map(Term) orelse throw(badmap),
+        %% First validate exact fields, it's faster.
+
+    catch
+        {badval, Key, Val, ValType} ->
+            {error, [format( "Expected ~s in key ~p of ~s~nGot: ~p"
+                           , [ print_type(Model, ValType)
+                             , Key
+                             , print_type(Model, Self)
+                             , Val
+                             ]
+                           )], []};`
+        {badkey, Key} ->
+            {error, [format( "Missing key(s) ~p in ~p, expected ~s"
+                           , [ Key
+                             , Term
+                             , print_type(Model, Self)
+                             ]
+                           )], []};
+        badmap ->
+            {error, [format( "Expected ~s~nGot: ~p"
+                           , [ print_type(Model, Self)
+                             , Term
+                             ]
+                           )], []}
+    end.
+
+
 
 %% @private
 -spec validate_map( lee:model()
@@ -430,7 +483,7 @@ validate_map( Model
             , Term
             ) ->
     try
-        is_map(Term) orelse throw(badmap),
+
         [begin
              case lee:validate_term(Model, KeyT, K) of
                  {ok, _} -> ok;
@@ -459,69 +512,32 @@ validate_map( Model
                            )], []}
     end.
 
-%% @doc Reflection of a "Literal" map
--spec exact_map(#{term() := lee:type()}) -> lee:type().
-exact_map(Spec) ->
-    ?te( #{ exact_map_spec => Spec
-          , mandatory_map_fields => maps:keys(Spec)
-          }
-       , []
-       ).
-
 %% @private
--spec validate_exact_map( lee:model()
-                        , lee:type()
-                        , term()
-                        ) -> lee:validate_result().
-validate_exact_map( Model
-                  , Self = #type{refinement = Attr}
-                  , Term
-                  ) ->
+-spec validate_exact_fields( lee:model()
+                           , lee:type()
+                           , map()
+                           ) -> lee:validate_result().
+validate_exact_fields( Model
+                     , Self = #type{refinement = Attr}
+                     , Term
+                     ) ->
     #{ exact_map_spec := Spec
      , mandatory_map_fields := Mandatory0
      } = Attr,
-    try
-        is_map(Term) orelse throw(badmap),
-        Mandatory = ordsets:from_list(Mandatory0),
-        maps:map( fun(K, Type) ->
-                          case {Term, ordsets:is_element(K, Mandatory)} of
-                              {#{K := Val}, _} ->
-                                  case lee:validate_term(Model, Type, Val) of
-                                      {ok, []} -> ok;
-                                      _        -> throw({badval, K, Val, Type})
-                                  end;
-                              {_, true} ->
-                                  throw({badkey, K});
-                              {_, false} ->
-                                  ok
-                          end
-                  end
-                , Spec
-                ),
-        {ok, []}
-    catch
-        {badval, Key, Val, ValType} ->
-            {error, [format( "Expected ~s in key ~p of ~s, got ~p"
-                           , [ print_type(Model, ValType)
-                             , Key
-                             , print_type(Model, Self)
-                             , Val
-                             ]
-                           )], []};
-        {badkey, Key} ->
-            {error, [format( "Missing key(s) ~p in ~p, expected ~s"
-                           , [ Key
-                             , Term
-                             , print_type(Model, Self)
-                             ]
-                           )], []};
-        badmap ->
-            {error, [format( "Expected ~s, got ~p"
-                           , [ print_type(Model, Self)
-                             , Term
-                             ]
-                           )], []}
-    end.
+    Mandatory = ordsets:from_list(Mandatory0),
+    [case {Term, ordsets:is_element(K, Mandatory)} of
+         {#{K := Val}, _} ->
+             case lee:validate_term(Model, Type, Val) of
+                 {ok, []} -> ok;
+                 _        -> throw({badval, K, Val, Type})
+             end;
+         {_, true} ->
+             throw({badkey, K});
+         {_, false} ->
+             ok
+     end
+     || {K, Type} <- Spec],
+    ok.
 
 %% @private
 -spec print_exact_map(lee:model(), lee:type()) ->
