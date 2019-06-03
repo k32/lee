@@ -2,7 +2,7 @@
 [{<<"map_sets">>,{pkg,<<"map_sets">>,<<"1.1.0">>},0},
  {<<"typerefl">>,
   {git,"https://github.com/k32/typerefl",
-       {ref,"137a85a3c4a833c0815ebf9f8cb1c366cd94129c"}},
+       {ref,"820aee037e59ded3f0927e629240b165b5768f0f"}},
   0}]}.
 [
 {pkg_hash,[

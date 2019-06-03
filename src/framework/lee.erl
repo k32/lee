@@ -98,15 +98,15 @@ namespace(Key, M) ->
 base_metamodel() ->
     namespace([metatype]
              , #{ value =>
-                      {[metatype]
-                      , #{validate_node => fun validate_value/4}
-                      }
+                      {[metatype],
+                       #{ validate_node => fun validate_value/4
+                        }}
                 , map =>
-                      {[metatype]
-                      , #{}
-                      }
-                , type => {[metatype] , #{}}
-                , typedef => {[metatype] , #{}}
+                      {[metatype], #{}}
+                , type =>
+                      {[metatype] , #{}}
+                , typedef =>
+                      {[metatype] , #{}}
                 }
              ).
 
@@ -161,7 +161,7 @@ list(Model, Data, Pattern) when is_list(Data) ->
 %% Validate all values against the model
 -spec validate(lee:model(), data()) -> validate_result().
 validate(Model, Data) ->
-    validate([value, map], Model, Data).
+    validate(all, Model, Data).
 
 %% Validate all instances of certain metatypes against the model
 -spec validate([metatype()] | all, lee:model(), data()) -> validate_result().
@@ -207,18 +207,23 @@ from_string(Model, Key, String) ->
                           {ok, [term()]} | {error, string()}.
 from_strings(Model, Key, Strings) ->
     #mnode{metaparams = MP} = lee_model:get(Key, Model),
-    Type = maps:get(type, MP),
+    Type = ?m_attr(value, type, MP),
     try
         case MP of
+            %% from_string callback is defined:
             #{?m_valid(value, from_string) := Fun} ->
-                [case Fun(I) of
-                     {ok, T}          -> T;
-                     Err = {error, _} -> throw(Err)
-                 end || I <- Strings];
+                {ok, [case Fun(I) of
+                          {ok, T}          -> T;
+                          Err = {error, _} -> throw(Err)
+                      end || I <- Strings]};
+            %% Fallback to typerefl:
             _ ->
                 case typerefl:from_string(Type, Strings) of
-                    {ok, L} -> L;
-                    error -> throw({error, "Not an Erlang term"})
+                    {ok, L} ->
+                        {ok, L};
+                    error ->
+                        Msg = lee_lib:format("Not an Erlang term: ~p", [Strings]),
+                        throw({error, Msg})
                 end
         end
     catch

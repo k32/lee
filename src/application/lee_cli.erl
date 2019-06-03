@@ -32,15 +32,21 @@
 
 -spec metamodel() -> lee:module().
 metamodel() ->
-    #{metatype => #{ cli_param =>
-                         {[metatype]
-                         , #{validate_mo => fun(_,_,_,_) -> ok end}
-                         }
-                   , cli_action =>
-                         {[metatype]
-                         , #{validate_mo => fun(_,_,_,_) -> ok end}
-                         }
-                   }}.
+    #{metatype =>
+          #{ cli_param =>
+                 {[metatype]
+                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 }
+           , cli_action =>
+                 {[metatype]
+                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 }
+           , cli_positional =>
+                 {[metatype]
+                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 }
+           }
+     }.
 
 %% @doc Read CLI arguments to a patch
 %% @throws {error, string()}
@@ -133,15 +139,13 @@ parse_command(Model, Scopes, [{command, Cmd} | Rest]) ->
             throw(ErrorMsg)
     end.
 
-parse_args(_Model, _Scope, []) ->
-    #{};
 parse_args( Model
           , #sc{ name = Name
                , long = Long
                , short = Short
                , parent = Parent
                } = Scope
-          , [{ArgType, Arg, Val}|Rest]
+          , [{ArgType, Arg, Val} | Rest]
           ) when ArgType =:= long; ArgType =:= short ->
     {Dash, ArgMap} = case ArgType of
                          long  -> {"-", Long};
@@ -169,29 +173,47 @@ parse_args( Model
     end;
 parse_args( Model
           , #sc{ name = Name
-               , positional = Pos0
+               , positional = Specs
                , parent = Parent
                } = Scope0
-          , Positionals = [{positional, Val} | Rest]
+          , Positionals
           ) ->
-    case Pos0 of
-        [] ->
-            ErrorMsg = lee_lib:format( "Unexpected positional CLI argument ~p in context ~s"
-                                     , [Val, Name]
-                                     ),
-            throw(ErrorMsg);
-        [{rest, Key}] ->
-            RelKey = make_relative(Key, Parent),
-            Terms = lee:from_strings(Model, Key, [I || {_, I} <- Positionals]),
-            #{RelKey => Terms};
-        [{Position, Key} | PRest] ->
-            RelKey = make_relative(Key, Parent),
-            Scope = Scope0#sc{positional = PRest},
-            {ok, Term} = lee:from_string(Model, Key, Val),
-            maps:merge( #{RelKey => Term}
-                      , parse_args(Model, Scope, Rest)
-                      )
+    case zip_positionals(Model, Parent, Specs, Positionals) of
+        {error, underflow} ->
+            throw(lee_lib:format( "Not enough CLI arguments in command ~s"
+                                , [Name]
+                                ));
+        {error, overflow, Val} ->
+            throw(lee_lib:format( "Unexpected positional CLI argument ~p in command ~s"
+                                , [Val, Name]
+                                ));
+        Zipped ->
+            Zipped
     end.
+
+zip_positionals(Model, Parent, [{rest, Key}], Vals0) ->
+    Vals = [I || {_, I} <- Vals0],
+    case lee:from_strings(Model, Key, Vals) of
+        {ok, Terms} ->
+            RelKey = make_relative(Key, Parent),
+            #{RelKey => Terms};
+        Err = {error, _} ->
+            throw(Err)
+    end;
+zip_positionals(Model, Parent, [{_Position, Key}|T1], [{positional, Val}|T2]) ->
+    case lee:from_string(Model, Key, Val) of
+        {ok, Term} ->
+            RelKey = make_relative(Key, Parent),
+            (zip_positionals(Model, Parent, T1, T2)) #{RelKey => Term};
+        Err = {error, _} ->
+            throw(Err)
+    end;
+zip_positionals(_, _, [], [{positional, Val}|_]) ->
+    {error, overflow, Val};
+zip_positionals(_, _, [_|_], []) ->
+    {error, underflow};
+zip_positionals(_, _, [], []) ->
+    #{}.
 
 mk_index(Model) ->
     Scopes0 = lee_model:fold( fun mk_index/4

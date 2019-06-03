@@ -242,3 +242,9 @@ no_key_test() ->
     ?assertMatch( {error, _}
                 , read_cli("@action_1")
                 ).
+
+rest_empty_list_test() ->
+    {ok, Data} = read_cli("@action_3"),
+    ?assertMatch( {ok, []}
+                , catch lee_storage:get([action_3, ?lcl([]), posn_n], Data)
+                ).

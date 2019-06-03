@@ -11,6 +11,8 @@
         , get_d/1
         , get/1
         , list/1
+        , dump/0
+        , run_t/1
         ]).
 
 %% gen_server callbacks
@@ -69,6 +71,25 @@ list(Pattern) ->
     Model = lee_mnesia_storage:from_table(?model_table),
     Data = lee_mnesia_storage:from_table(?data_table),
     lee:list(Model, Data, Pattern).
+
+%% @doc Get a value via dirty mnesia read
+-spec dump() -> lee:patch().
+dump() ->
+    %% TODO: optimize these calls (should be constants)
+    Data = lee_dirty_mnesia_storage:from_table(?data_table),
+    lee_storage:dump(Data).
+
+-spec run_t(fun()) -> term().
+run_t(Fun0) ->
+    Fun = fun() ->
+                  Model = lee_dirty_mnesia_storage:from_table(?model_table),
+                  Data = lee_dirty_mnesia_storage:from_table(?data_table),
+                  Fun0(Model, Data)
+          end,
+    case mnesia:transaction(Fun) of
+        {atomic, Ret} -> Ret;
+        {aborted, Ret} -> throw(Ret)
+    end.
 
 %%%===================================================================
 %%% gen_server callbacks

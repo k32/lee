@@ -28,6 +28,9 @@ model() ->
              }}
      }.
 
+metamodel() ->
+    lee_os_env:metamodel().
+
 initial_data() ->
     [ {set, [path], "initial"}
     , {set, [foo], 0}

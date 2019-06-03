@@ -8,15 +8,16 @@
 -include("lee.hrl").
 
 -define(metatype, os_env).
--define(os_env, os_env).
 
 -spec metamodel() -> lee:lee_module().
 metamodel() ->
-    #{ metatype => #{ ?metatype =>
-                          {[metatype]
-                          , #{}
-                          }
-                    }}.
+    #{ metatype =>
+           #{ ?metatype =>
+                  {[metatype]
+                  , #{}
+                  }
+            }
+     }.
 
 %% @doc Make a patch from OS environment variables
 %% @throws {error, string()}
@@ -39,7 +40,7 @@ read_to(Model, Data) ->
 
 read_val(Model, Key, Acc) ->
     #mnode{metaparams = Attrs} = lee_model:get(Key, Model),
-    EnvVar = ?m_attr(?metatype, ?os_env, Attrs),
+    EnvVar = ?m_attr(?metatype, os_env, Attrs),
     case os:getenv(EnvVar) of
         false ->
             Acc;
