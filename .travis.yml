@@ -1,4 +1,9 @@
 language: erlang
+
+before_install:
+  - sudo apt-get install -y pandoc
+  - sudo apt-get install -y libxml2
+
 otp_release:
   - 21.1
   - 20.3.8

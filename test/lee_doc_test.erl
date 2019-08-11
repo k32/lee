@@ -5,15 +5,8 @@
 
 -include("lee.hrl").
 
-model() ->
-    Model = #{ foo =>
-                   {[value],
-                    #{ oneliner => "This parameter controls fooing"
-                     , type     => typerefl:string()
-                     , default  => "foo"
-
-                     , doc => "
-<para>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
+long_text() ->
+"<para>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
 convallis nibh vel consectetur consequat. Nunc vitae ex eu lorem
 vulputate bibendum vel quis nibh. Maecenas vulputate purus a tincidunt
 bibendum. Proin scelerisque ligula elementum leo auctor, et accumsan
@@ -67,7 +60,22 @@ accumsan. Donec non justo in ex vehicula posuere vel ut purus. Aenean
 vestibulum nulla at ante ultricies bibendum. Aliquam erat
 volutpat. Integer pellentesque sit amet felis viverra
 imperdiet. Pellentesque dapibus ipsum in magna ultrices
-consectetur. Suspendisse non est ex.</para>"
+consectetur. Suspendisse non est ex.</para>".
+
+model() ->
+    Model = #{ '$doc_root' =>
+                   {[doc_root],
+                    #{ oneliner => "This is a test model for doc extraction"
+                     , app_name => "Lee Test Application"
+                     , doc => long_text()
+                     , prog_name => "lee_test"
+                     }}
+             , foo =>
+                   {[value],
+                    #{ oneliner => "This parameter controls fooing"
+                     , type     => typerefl:string()
+                     , default  => "foo"
+                     , doc      => long_text()
                      }}
              , bar =>
                    {[value, os_env],
@@ -91,10 +99,12 @@ consectetur. Suspendisse non est ex.</para>"
                      , oneliner => "This value controls xizzying"
                      , file_key => xizzy
                      }}
+             , cli => lee_cli_tests:test_model_raw()
              },
     {ok, Mod} = lee_model:compile( [ lee:base_metamodel()
                                    , lee_os_env:metamodel()
                                    , lee_consult:metamodel()
+                                   , lee_cli:metamodel()
                                    ]
                                  , [Model]
                                  ),
@@ -103,6 +113,7 @@ consectetur. Suspendisse non est ex.</para>"
 
 export_test() ->
     MTs = [ os_env
+          , {cli_param, #{prog_name => "lee_test"}}
           , consult
           , {consult, #{ filter      => [foo]
                        , config_name => "foo.conf"
@@ -112,9 +123,8 @@ export_test() ->
                        }}
           , value
           ],
-    lee_doc:make_doc(model(), "My application", MTs, "foo.xml"),
-    [io:put_chars(
-       os:cmd("pandoc -o foo." ++ Fmt ++
-              " --toc -sf docbook -t " ++ Fmt ++" foo.xml"))
-     || Fmt <- ["html", "man", "texinfo"]
-    ].
+    Config = #{ app_name => "Lee Demo"
+              , metatypes => MTs
+              , run_pandoc => true
+              },
+    lee_doc:make_docs(model(), Config).

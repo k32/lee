@@ -1,6 +1,6 @@
 -module(lee_doc).
 
--export([make_doc/3, make_doc/4, document_values/2]).
+-export([make_docs/2, document_values/2]).
 
 -export([ simplesect/2
         , erlang_listing/1
@@ -13,7 +13,14 @@
 
 -type doc() :: term().
 
--export_type([doc/0]).
+-type doc_options() ::
+        #{ app_name     := string()
+         , introduction => doc()
+         , metatypes    := [lee:metatype() | {lee:metatype(), term()}]
+         , output_dir   => file:filename()
+         }.
+
+-export_type([doc/0, doc_options/0]).
 
 -spec erlang_listing(iolist()) -> doc().
 erlang_listing(Str) ->
@@ -41,7 +48,7 @@ xref_key(Key) ->
 refer_value(Key, Metatype, Title, MNode) ->
     SectionId = lee_lib:format("~p", [{Metatype, Title}]),
     #mnode{metaparams = Attrs} = MNode,
-    Oneliner = ?m_valid(value, maps:get(oneliner, Attrs, "")),
+    Oneliner = ?m_attr(value, oneliner, Attrs, ""),
     {section, [{id, SectionId}]
     , [ {title, [Title]}
       , {para, [Oneliner ++ ", see: ", lee_doc:xref_key(Key)]}
@@ -59,7 +66,7 @@ docbook(String) ->
                             doc().
 document_value(Key, Model) ->
     #mnode{metaparams = Attrs} = lee_model:get(Key, Model),
-    Oneliner = ?m_valid(value, maps:get(oneliner, Attrs, "")),
+    Oneliner = ?m_attr(value, oneliner, Attrs, ""),
     Type = ?m_attr(value, type, Attrs),
     Default =
         case Attrs of
@@ -93,41 +100,24 @@ document_values(Model, _Config) ->
     Keys = maps:get(value, Idx, []),
     [document_value(Key, Model) || Key <- Keys].
 
--spec make_doc( lee:model()
-              , string()
-              , [lee:metatype() | {lee:metatype(), term()}]
-              , file:filename()
-              ) -> ok.
-make_doc(Model, Title, Metatypes, Filename) ->
-    Doc = make_doc(Model, Title, Metatypes),
+-spec make_file(atom(), doc(), string()) -> file:filename().
+make_file(Top, Data, Id) ->
+    RootAttrs = [ {xmlns, "http://docbook.org/ns/docbook"}
+                , {version, "5.0"}
+                , {id, Id}
+                ],
+    Doc = {Top, RootAttrs, Data},
+    DocStr = xmerl:export_simple([Doc], xmerl_xml, [{prolog, ""}]),
+    Filename = filename:join("lee_doc", Id ++ ".xml"),
+    ok = filelib:ensure_dir(Filename),
     {ok, FD} = file:open(Filename, [write]),
-    try io:format(FD, "~s~n", [Doc])
+    try ok = io:format(FD, "~s~n", [DocStr])
     after
         file:close(FD)
     end,
-    ok.
+    Filename.
 
--spec make_doc( lee:model()
-              , string()
-              , [lee:metatype() | {lee:metatype(), term()}]
-              ) -> doc().
-make_doc(Model, Title, Metatypes0) ->
-    RootAttrs = [ {xmlns, "http://docbook.org/ns/docbook"}
-                , {version, "5.0"}
-                ],
-    Metatypes = [case I of
-                     {_, _} -> I;
-                     _ when is_atom(I) -> {I, undefined}
-                 end || I <- Metatypes0],
-    Doc = { book
-          , RootAttrs
-          , [ {title, [Title]}
-            | [metatype_docs(MetaType, Model) || MetaType <- Metatypes]
-            ]
-          },
-    xmerl:export_simple([Doc], xmerl_xml, [{prolog, ""}]).
-
--spec metatype_docs( {lee:metatype(), term()}
+-spec metatype_docs( lee:metatype() | {lee:metatype(), term()}
                    , lee:model()
                    ) -> doc().
 metatype_docs({MetaType, DocConfig}, Model) ->
@@ -141,7 +131,52 @@ metatype_docs({MetaType, DocConfig}, Model) ->
             end,
     GenDocs = ?m_attr(documented, doc_gen, Attrs),
     Content = GenDocs(Model, DocConfig),
-    SectionId = lee_lib:format("~p", [{metatype, MetaType, DocConfig}]),
+    %% TODO: it's not the way
+    ChapterSuffix = case DocConfig of
+                        #{chapter_name := CN} ->
+                            [$-|CN];
+                        _ ->
+                            ""
+                    end,
+    SectionId = lee_lib:format("chapter-~p~s", [MetaType, ChapterSuffix]),
     {chapter, [{id, SectionId}]
     , [{title, [Title]} | Content]
+    };
+metatype_docs(MetaType, Model) ->
+    metatype_docs({MetaType, undefined}, Model).
+
+-spec make_docs(lee:model(), doc_options()) -> ok.
+make_docs(Model, Options) ->
+    #{metatypes := Metatypes} = Options,
+    DocRoot = maps:get(doc_root, Options, ['$doc_root']),
+    #mnode{metaparams = Attrs} = lee_model:get(DocRoot, Model),
+    AppName = ?m_attr(doc_root, app_name, Attrs),
+    Intro = make_intro_chapter(Attrs),
+    Chapters = [metatype_docs(MT, Model) || MT <- Metatypes],
+    Contents = [{title, [AppName]}, Intro | Chapters],
+    Top = make_file(book, Contents, AppName),
+    case maps:get(run_pandoc, Options, false) of
+        true ->
+            {0, _} = run_pandoc(Top, "html"),
+            {0, _} = run_pandoc(Top, "man"),
+            {0, _} = run_pandoc(Top, "texinfo");
+        false ->
+            ok
+    end.
+
+make_intro_chapter(Attrs) ->
+    AppOneliner = ?m_attr(doc_root, oneliner, Attrs),
+    AppDoc = docbook(?m_attr(doc_root, doc, Attrs, "")),
+    {chapter, [{id, "intro"}]
+    , [{title, ["Introduction"]}, {para, [AppOneliner]} | AppDoc]
     }.
+
+run_pandoc(SrcFile, OutFormat) ->
+    %% TODO: this is sketchy and wrong
+    OutName = filename:rootname(SrcFile) ++ [$.|OutFormat],
+    Cmd = lee_lib:format( "pandoc -o '~s' -f docbook -t ~s '~s'"
+                        , [OutName, OutFormat, SrcFile]
+                        ),
+    lee_lib:run_cmd("pandoc", [ "--toc", "-s", "-f", "docbook", "-t", OutFormat, "-o"
+                              , OutName, SrcFile
+                              ]).

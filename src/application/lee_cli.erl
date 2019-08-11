@@ -6,6 +6,7 @@
 -export([ metamodel/0
         , read/2
         , read_to/3
+        , doc_gen/2
         ]).
 
 -ifdef(TEST).
@@ -14,14 +15,18 @@
 
 -include("lee.hrl").
 
+-define(sigil, $@).
+
 %% CLI command scope:
 -record(sc,
         { name = global    :: string() | global
-        , short = #{}      :: #{char() => {lee:key(), lee:type()}}
-        , long  = #{}      :: #{string() => {lee:key(), lee:type()}}
+        , short = #{}      :: #{char() => lee:key()}
+        , long  = #{}      :: #{string() => lee:key()}
         , positional = []  :: [{integer() | rest, lee:key()}]
         , parent = []      :: lee:key()
         }).
+
+-type doc_config() :: #{prog_name := string()}.
 
 -type token() :: {long, string(), string()}
                | {short, char(), string()}
@@ -34,8 +39,11 @@
 metamodel() ->
     #{metatype =>
           #{ cli_param =>
-                 {[metatype]
-                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 {[metatype, documented]
+                 , #{ validate_mo => fun(_,_,_,_) -> ok end
+                    , doc_chapter_title => "CLI Arguments"
+                    , doc_gen => fun ?MODULE:doc_gen/2
+                    }
                  }
            , cli_action =>
                  {[metatype]
@@ -53,7 +61,7 @@ metamodel() ->
 -spec read(lee:model(), [string()]) -> lee:patch().
 read(Model, Args0) ->
     Scopes = mk_index(Model),
-    Tokens = tokenize($@, Args0),
+    Tokens = tokenize(?sigil, Args0),
     case split_commands(Tokens) of
         [[{command, _} | _] | _] = Commands ->
             Global = [];
@@ -86,6 +94,16 @@ read_to(Model, Args, Data) ->
 tokenize(Sigil, L) ->
     Tokens = [I || I <- tokenize_(Sigil, L), I /= []],
     group_tokens(Tokens).
+
+-spec doc_gen(lee:model(), doc_config()) -> lee_doc:doc().
+doc_gen(Model, Config) ->
+    [{global, Global}|Scopes] = lists:sort(maps:to_list(mk_index(Model))),
+    GlobalDoc = [{section, make_scope_docs(Global, Model)}],
+    ActionDocs =
+        [{section, [{id, "cli-command-" ++ Name}]
+         , [{title, [[?sigil|Name]]} | make_cli_action_docs(I, Model)]}
+         || {Name, I} <- Scopes],
+    GlobalDoc ++ ActionDocs.
 
 %%====================================================================
 %% Internal functions
@@ -280,3 +298,27 @@ make_relative(Key, []) ->
 make_relative(Key0, Parent) ->
     [?children | Key] = Key0 -- Parent,
     Key.
+
+make_cli_action_docs(Scope = #sc{parent = Parent}, Model) ->
+    #mnode{metaparams = ParentAttrs} = lee_model:get(Parent, Model),
+    Oneliner = maps:get(oneliner, ParentAttrs, ""),
+    Doc = lee_doc:docbook(maps:get(doc, ParentAttrs, "")),
+    Preamble = [{para, [Oneliner]}|Doc],
+    Preamble ++ make_scope_docs(Scope, Model).
+
+make_scope_docs(#sc{ short = Short
+                   , long = Long
+                   , positional = Positional
+                   }, Model) ->
+    LongDoc = [document_param("--" ++ L, Key, Model)
+               || {L, Key} <- maps:to_list(Long)],
+    ShortDoc = [document_param("-" ++ S, Key, Model)
+                || {S, Key} <- maps:to_list(Short)],
+    PositionalDocs =
+        [document_param(lee_lib:format("Position: ~p", [P]), Key, Model)
+         || {P, Key} <- Positional],
+    LongDoc ++ ShortDoc ++ PositionalDocs.
+
+document_param(Name, Key, Model) ->
+    MNode = lee_model:get(Key, Model),
+    lee_doc:refer_value(Key, cli_param, Name, MNode).

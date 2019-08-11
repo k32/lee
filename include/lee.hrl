@@ -33,4 +33,9 @@
 %% the latter is valid under `MetaType'
 -define(m_attr(MetaType, Attr, Attrs), ?m_valid(MetaType, maps:get(Attr, Attrs))).
 
+%% Get an optional attribute from the attribute map `Attrs', assuming
+%% the latter is valid under `MetaType'
+-define(m_attr(MetaType, Attr, Attrs, Default),
+        ?m_valid(MetaType, maps:get(Attr, Attrs, Default))).
+
 -endif.

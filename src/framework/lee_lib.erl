@@ -9,6 +9,7 @@
         , splitl/2
         , splitr/2
         , inject_error_location/2
+        , run_cmd/2
         ]).
 
 -spec format(string(), [term()]) -> string().
@@ -94,4 +95,26 @@ inject_error_location(Location, Result) ->
             {ok, [Fun(I) || I <- Warn]};
         {error, Err, Warn} ->
             {error, [Fun(I) || I <- Err], [Fun(I) || I <- Warn]}
+    end.
+
+-spec run_cmd(string(), [string()]) -> {integer(), binary()} | {error, term()}.
+run_cmd(Cmd, Args) ->
+    case os:find_executable(Cmd) of
+        false ->
+            {error, enoent};
+        Executable ->
+            Port = erlang:open_port( {spawn_executable, Executable}
+                                   , [ exit_status
+                                     , stderr_to_stdout
+                                     , {args, Args}
+                                     ]),
+            collect_port_output(Port, [])
+    end.
+
+collect_port_output(Port, Acc) ->
+    receive
+        {Port, {exit_status, Status}} ->
+            {Status, iolist_to_binary(Acc)};
+        {Port, {data, Data}} ->
+            [Acc|Data]
     end.
