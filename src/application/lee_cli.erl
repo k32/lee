@@ -132,7 +132,7 @@ tokenize_(Sigil, ["-" ++ [S1|Shorts] | Rest]) ->
               [] -> [];
               _  -> [{positional, Arg0}]
           end,
-    [{short, [I], "true"} || I <- [S1|Flags]] ++ Arg ++ tokenize_(Sigil, Rest);
+    [{short, I, "true"} || I <- [S1|Flags]] ++ Arg ++ tokenize_(Sigil, Rest);
 tokenize_(Sigil, [A|Rest]) ->
     [{positional, A}|tokenize_(Sigil, Rest)].
 
@@ -312,7 +312,7 @@ make_scope_docs(#sc{ short = Short
                    }, Model) ->
     LongDoc = [document_param("--" ++ L, Key, Model)
                || {L, Key} <- maps:to_list(Long)],
-    ShortDoc = [document_param("-" ++ S, Key, Model)
+    ShortDoc = [document_param([$-, S], Key, Model)
                 || {S, Key} <- maps:to_list(Short)],
     PositionalDocs =
         [document_param(lee_lib:format("Position: ~p", [P]), Key, Model)

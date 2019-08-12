@@ -16,25 +16,25 @@ test_cli_params() ->
               }
            }
      , short => {[value, cli_param]
-                , #{ cli_short => "s"
+                , #{ cli_short => $s
                    , type => typerefl:integer()
                    , oneliner => "An example of a short CLI argument"
                    }
                 }
      , flag1 => {[value, cli_param]
-                , #{ cli_short => "f"
+                , #{ cli_short => $f
                    , type => typerefl:boolean()
                    , oneliner => "Flag1"
                    }
                 }
      , flag2 => {[value, cli_param]
-                , #{ cli_short => "g"
+                , #{ cli_short => $g
                    , type => typerefl:boolean()
                    , oneliner => "Some flag"
                    }
                 }
      , flag3 => {[value, cli_param]
-                , #{ cli_short => "h"
+                , #{ cli_short => $h
                    , type => typerefl:boolean()
                    , oneliner => "Another flag"
                    }
@@ -42,7 +42,7 @@ test_cli_params() ->
      , both =>
            {[value, cli_param]
            , #{ cli_operand => "both"
-              , cli_short => "b"
+              , cli_short => $b
               , type => typerefl:tuple([foo, typerefl:integer()])
               , oneliner => "This can be set via short or long argument"
               }
@@ -121,7 +121,7 @@ test_model() ->
 
 tokenize_test() ->
     ?tok("--foo", [{long, "foo", "true"}]),
-    ?tok("-sj42", [{short, "s", "true"}, {short, "j", "42"}]),
+    ?tok("-sj42", [{short, $s, "true"}, {short, $j, "42"}]),
     ?tok("@foo", [{command, "foo"}]),
     ?tok( "--foo bar --bar foo"
         , [ {long, "foo", "bar"}
@@ -148,15 +148,15 @@ tokenize_test() ->
           , {positional, "quux"}
           , {positional, "foo"}
           ]),
-    ?tok("-s0 -c9", [{short, "s", "0"}, {short, "c", "9"}]),
+    ?tok("-s0 -c9", [{short, $s, "0"}, {short, $c, "9"}]),
     ?tok( "kill -9 -fml0 --foo bar -j 11 - @cmd foo -- @bar"
         , [ {positional, "kill"}
-          , {short, "9", "true"}
-          , {short, "f", "true"}
-          , {short, "m", "true"}
-          , {short, "l", "0"}
+          , {short, $9, "true"}
+          , {short, $f, "true"}
+          , {short, $m, "true"}
+          , {short, $l, "0"}
           , {long, "foo", "bar"}
-          , {short, "j", "11"}
+          , {short, $j, "11"}
           , {positional, "-"}
           , {command, "cmd"}
           , {positional, "foo"}

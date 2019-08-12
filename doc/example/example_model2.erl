@@ -11,7 +11,7 @@ model() ->
            {[value, cli_param], %% This value is read from CLI
             #{ type => boolean()
              , oneliner => "This value controls fooing"
-             , cli_short => "f"
+             , cli_short => $f
              , cli_operand => "foo"
              }}
      , bar =>
