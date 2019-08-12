@@ -1,17 +1,27 @@
 -module(lee_consult_tests).
 
 -include_lib("eunit/include/eunit.hrl").
+-include_lib("typerefl/include/types.hrl").
 -include_lib("lee/include/lee.hrl").
 
 model() ->
     Model0 = #{ list => {[value, consult, foo]
-                        , #{file_key => list}
+                        , #{ file_key => list
+                           , type => string()
+                           }
                         }
               , deps => {[value, consult, bar]
-                        , #{file_key => deps}
+                        , #{ file_key => deps
+                           , type => string()
+                           }
                         }
               },
-    {ok, Model} = lee_model:compile([], [Model0]),
+    FooBar = #{ metatype =>
+                    #{ foo => {[metatype], #{}}
+                     , bar => {[metatype], #{}}
+                     }},
+    Meta = [lee:base_metamodel(), lee_consult:metamodel(), FooBar],
+    {ok, Model} = lee_model:compile(Meta, [Model0]),
     Model.
 
 proplist_test() ->

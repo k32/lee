@@ -9,8 +9,14 @@
         , splitl/2
         , splitr/2
         , inject_error_location/2
+        , compose_checks/1
+        , perform_checks/3
         , run_cmd/2
         ]).
+
+-export_type([check_result/0]).
+
+-type check_result() :: {[string()], [string()]}.
 
 -spec format(string(), [term()]) -> string().
 format(Fmt, Attrs) ->
@@ -84,18 +90,15 @@ term_to_string(Term) ->
         false -> format("~p", [Term])
     end.
 
--spec inject_error_location(term(), lee:validate_result()) ->
-                                   lee:validate_result().
-inject_error_location(Location, Result) ->
+-spec inject_error_location(lee:key(), check_result()) ->
+                                   check_result().
+inject_error_location(Location, {Err, Warn}) ->
     Fun = fun(Msg) ->
-                  format("Key: ~p~n~s", [Location, term_to_string(Msg)])
+                  format( "Key: ~p~n~s"
+                        , [Location, term_to_string(Msg)]
+                        )
           end,
-    case Result of
-        {ok, Warn} ->
-            {ok, [Fun(I) || I <- Warn]};
-        {error, Err, Warn} ->
-            {error, [Fun(I) || I <- Err], [Fun(I) || I <- Warn]}
-    end.
+    {[Fun(I) || I <- Err], [Fun(I) || I <- Warn]}.
 
 -spec run_cmd(string(), [string()]) -> {integer(), binary()} | {error, term()}.
 run_cmd(Cmd, Args) ->
@@ -118,3 +121,14 @@ collect_port_output(Port, Acc) ->
         {Port, {data, Data}} ->
             [Acc|Data]
     end.
+
+-spec compose_checks([check_result()]) -> check_result().
+compose_checks(L) ->
+    {Err, Warn} = lists:unzip(L),
+    {lists:append(Err), lists:append(Warn)}.
+
+-spec perform_checks(lee:key(), M, [fun((M) -> check_result())]) ->
+                            check_result().
+perform_checks(Key, Attrs, CheckFuns) ->
+    CheckResults = [F(Attrs) || F <- CheckFuns],
+    inject_error_location(Key, compose_checks(CheckResults)).

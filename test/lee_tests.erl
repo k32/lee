@@ -67,6 +67,29 @@ validate_test() ->
               }),
     ok.
 
+meta_validate_value_test() ->
+    Compile = fun(Attrs) ->
+                      lee_model:compile( [lee:base_metamodel()]
+                                       , [#{foo => {[value], Attrs}}]
+                                       )
+              end,
+    %% Missing `type':
+    ?assertMatch( {error, {validation_error, _}}
+                , Compile(#{})
+                ),
+    %% Wrong type of `default':
+    ?assertMatch( {error, {validation_error, _}}
+                , Compile(#{type => integer(), default => foo})
+                ),
+    %% Wrong type of `oneliner':
+    ?assertMatch( {error, {validation_error, _}}
+                , Compile(#{type => integer(), oneliner => foo})
+                ),
+    %% Error in `doc':
+    ?assertMatch( {error, {validation_error, _}}
+                , Compile(#{type => integer(), doc => "<para>foo"})
+                ).
+
 get_test() ->
     Model0 = #{ foo => {[value]
                        , #{type => typerefl:boolean()}

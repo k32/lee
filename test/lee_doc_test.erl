@@ -101,10 +101,15 @@ model() ->
                      }}
              , cli => lee_cli_tests:test_model_raw()
              },
+    FooBar = #{ metatype =>
+                    #{ foo => {[metatype], #{}}
+                     , bar => {[metatype], #{}}
+                     }},
     {ok, Mod} = lee_model:compile( [ lee:base_metamodel()
                                    , lee_os_env:metamodel()
                                    , lee_consult:metamodel()
                                    , lee_cli:metamodel()
+                                   , FooBar
                                    ]
                                  , [Model]
                                  ),

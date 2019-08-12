@@ -42,10 +42,16 @@ compile(MetaModels0, Models0) ->
     Models = [compile_module(I) || I <- Models0],
     case {merge(MetaModels), merge(Models)} of
         {{ok, MetaModel}, {ok, Model}} ->
-            {ok, #model{ metamodel      = MetaModel
-                       , model          = Model
-                       , meta_class_idx = mk_metatype_index(Model)
-                       }};
+            Result = #model{ metamodel      = MetaModel
+                           , model          = Model
+                           , meta_class_idx = mk_metatype_index(Model)
+                           },
+            case lee:meta_validate(Result) of
+                {ok, _} ->
+                    {ok, Result};
+                {error, Err, _Warn} ->
+                    {error, {validation_error, Err}}
+            end;
         {T1, T2} ->
             {error, [Err || {error, Err} <- [T1, T2]]}
     end.

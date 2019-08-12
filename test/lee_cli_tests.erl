@@ -6,7 +6,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 test_cli_params() ->
-    #{ something_unrelated => {[something], #{}}
+    #{ something_unrelated => {[], #{}}
      , long =>
            {[value, cli_param]
            , #{ cli_operand => "long"
@@ -111,7 +111,11 @@ test_model_raw() ->
 
 test_model() ->
     MF = test_model_raw(),
-    {ok, M} = lee_model:compile([], [MF]),
+    {ok, M} = lee_model:compile( [ lee:base_metamodel()
+                                 , lee_cli:metamodel()
+                                 ]
+                               , [MF]
+                               ),
     M.
 
 -define(tok(String, Pattern),

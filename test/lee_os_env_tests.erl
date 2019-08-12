@@ -13,7 +13,8 @@ model() ->
                           , type => string()
                           }}
               },
-    {ok, Model} = lee_model:compile([], [Model0]),
+    Meta = [lee:base_metamodel(), lee_os_env:metamodel()],
+    {ok, Model} = lee_model:compile(Meta, [Model0]),
     Model.
 
 osenv_test() ->

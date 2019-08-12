@@ -13,6 +13,16 @@
 
 -define(mnode, #mnode{metatypes = _}).
 
+-define(metamodel,
+        #{ metatype =>
+               #{ t1 => {[metatype], #{}}
+                , t2 => {[metatype], #{}}
+                , bar => {[metatype], #{}}
+                }
+         }).
+
+-define(metamodels, lee:base_metamodel(), ?metamodel).
+
 -define(model(Attr), #{ foo => ?moc(Attr#{key => [foo]})
                       , bar =>
                             #{ bar => ?moc(Attr#{key => [bar, bar]}, #{})
@@ -44,13 +54,13 @@
 merge_test() ->
     Model = ?model(#{}),
     ?assertMatch( {ok, _}
-                , lee_model:compile([], [Model])
+                , lee_model:compile([?metamodels], [Model])
                 ),
     ?assertMatch( {error, _}
-                , lee_model:compile([Model, Model], [])
+                , lee_model:compile([?metamodels, Model, Model], [])
                 ),
     ?assertMatch( {error, _}
-                , lee_model:compile([], [Model, Model])
+                , lee_model:compile([?metamodels], [Model, Model])
                 ).
 
 compile_test() ->
@@ -66,7 +76,7 @@ compile_prop() ->
                   end,
     ?FORALL(Model0, model(atom(), #{}),
             begin
-                {ok, Model1} = lee_model:compile([], [Model0]),
+                {ok, Model1} = lee_model:compile([?metamodels], [Model0]),
                 Tr0 = lists:sort(lee_model:fold(RecordTrace, [], foo, Model0)),
                 Tr1 = lists:sort(lee_model:fold(RecordTrace, [], foo, Model1)),
                 ?assertMatch(Tr0, Tr1)
@@ -87,7 +97,7 @@ traverse_test() ->
                 ).
 
 cooked_traverse_test() ->
-    {ok, Model} = lee_model:compile([], [?model(#{})]),
+    {ok, Model} = lee_model:compile([?metamodels], [?model(#{})]),
     CheckKey =
         fun(Key, MO, Acc) ->
                 ?assertMatch( #mnode{ metatypes = [t1]
@@ -102,7 +112,7 @@ cooked_traverse_test() ->
                 ).
 
 get_test() ->
-    {ok, Model} = lee_model:compile([], [?model(#{})]),
+    {ok, Model} = lee_model:compile([?metamodels], [?model(#{})]),
     ?assertEqual( #mnode{ metatypes = [t1]
                         , metaparams = #{key => [foo]}
                         }
@@ -121,7 +131,7 @@ mk_metatype_index_test() ->
                       ordsets:from_list([[quux]])
                 },
     Model0 = ?model(#{}) #{quux => {[t2], #{}}},
-    {ok, Model} = lee_model:compile([], [Model0]),
+    {ok, Model} = lee_model:compile([?metamodels], [Model0]),
     ?assertEqual( Expected
                 , Model#model.meta_class_idx
                 ).

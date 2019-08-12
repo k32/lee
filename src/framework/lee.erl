@@ -3,11 +3,12 @@
 %% API exports
 -export([ namespace/2
         , base_metamodel/0
-        , metametamodel/0
         , get/3
         , list/3
         , validate/2
         , validate/3
+        , meta_validate/1
+        , meta_validate/2
         , from_string/3
         , from_strings/3
         ]).
@@ -49,6 +50,8 @@
 
 -type validate_callback() :: fun((model(), data(), key(), #mnode{}) ->
                                         validate_result()).
+
+-type validation_type() :: validate_node | meta_validate.
 
 -type metatype() :: atom().
 
@@ -100,25 +103,20 @@ base_metamodel() ->
              , #{ value =>
                       {[metatype, documented],
                        #{ validate_node     => fun validate_value/4
+                        , meta_validate     => fun meta_validate_value/4
                         , doc_chapter_title => "Values"
                         , doc_gen           => fun lee_doc:document_values/2
                         }}
                 , map =>
                       {[metatype], #{}}
-                , type =>
-                      {[metatype] , #{}}
-                , typedef =>
-                      {[metatype] , #{}}
+                , doc_root =>
+                      {[metatype],
+                       #{ %% doc_chapter_title => "Introduction" TODO
+                        %% , doc_gen           => fun lee_doc:doc_root/2
+                        %% , meta_validate     => fun lee_doc:validate_doc_root/4
+                        }}
                 }
              ).
-
-%% @doc A model validating metamodels
--spec metametamodel() -> lee:module().
-metametamodel() ->
-    MetaModel = #{
-                 },
-    {ok, Result} = lee_model:merge([MetaModel]),
-    Result.
 
 %% @doc Get a value from the config:
 -spec get(lee:model() | lee:cooked_module(), data(), lee:key()) -> term().
@@ -165,28 +163,18 @@ list(Model, Data, Pattern) when is_list(Data) ->
 validate(Model, Data) ->
     validate(all, Model, Data).
 
-%% Validate all instances of certain metatypes against the model
 -spec validate([metatype()] | all, lee:model(), data()) -> validate_result().
 validate(MetaTypes, Model, Data) ->
-    ModelIdx0 = Model#model.meta_class_idx,
-    ModelIdx = case MetaTypes of
-                   all -> ModelIdx0;
-                   L   -> maps:with(L, ModelIdx0)
-               end,
-    {Errors, Warnings} =
-        maps:fold( fun(MetaType, Nodes, {Err0, Warn0}) ->
-                           {Err1, Warn1} = validate_nodes(Model, Data, MetaType, Nodes),
-                           {Err1 ++ Err0, Warn1 ++ Warn0}
-                   end
-                 , {[], []}
-                 , ModelIdx
-                 ),
-    case Errors of
-        [] ->
-            {ok, Warnings};
-        _ ->
-            {error, Errors, Warnings}
-    end.
+    validate(validate_node, MetaTypes, Model, Data).
+
+-spec meta_validate(lee:model()) -> validate_result().
+meta_validate(Model) ->
+    meta_validate(all, Model).
+
+-spec meta_validate([metatype()] | all, lee:model()) -> validate_result().
+meta_validate(MetaTypes, Model) ->
+    Data = lee_storage:new(lee_map_storage), %% Mostly to make dialyzer happy
+    validate(meta_validate, MetaTypes, Model, Data).
 
 -spec from_string(lee:model(), lee:model_key(), string()) ->
                          {ok, term()} | {error, string()}.
@@ -230,19 +218,47 @@ from_strings(Model, Key, Strings) ->
 %% Internal functions
 %%====================================================================
 
+%% Validate all instances of certain metatypes against the model
+-spec validate(validation_type(), [metatype()] | all, lee:model(), data()) ->
+                      validate_result().
+validate(ValidationType, MetaTypes, Model, Data) ->
+    ModelIdx0 = Model#model.meta_class_idx,
+    ModelIdx = case MetaTypes of
+                   all -> ModelIdx0;
+                   L   -> maps:with(L, ModelIdx0)
+               end,
+    {Errors, Warnings} =
+        maps:fold( fun(MetaType, Nodes, {Err0, Warn0}) ->
+                           {Err1, Warn1} = validate_nodes( ValidationType
+                                                         , Model
+                                                         , Data
+                                                         , MetaType
+                                                         , Nodes
+                                                         ),
+                           {Err1 ++ Err0, Warn1 ++ Warn0}
+                   end
+                 , {[], []}
+                 , ModelIdx
+                 ),
+    case Errors of
+        [] ->
+            {ok, Warnings};
+        _ ->
+            {error, Errors, Warnings}
+    end.
+
 %% Validate all nodes belonging to a metatype
--spec validate_nodes( lee:model()
+-spec validate_nodes( validation_type()
+                    , lee:model()
                     , lee:data()
                     , atom() | integer() | tuple()
                     , ordsets:set(lee:model_key())
-                    ) -> {[string()], [string()]}.
-validate_nodes(Model, Data, MetaTypeId, Nodes) ->
+                    ) -> lee_lib:check_result().
+validate_nodes(ValidationType, Model, Data, MetaTypeId, Nodes) ->
     #model{metamodel = Meta} = Model,
     #mnode{metaparams = Attrs} = lee_model:get([metatype, MetaTypeId], Meta),
-    ValidateFun = maps:get( validate_node
-                          , Attrs
-                          , fun(_, _, _, _) -> {[], []} end
-                          ),
+    Default = fun(_, _, _, _) -> {[], []} end,
+    ValidateFun = ?m_attr(metatype, ValidationType, Attrs, Default),
     ordsets:fold( fun(NodeId, {E0, W0}) ->
                           {E1, W1} = validate_node(Model, Data, NodeId, ValidateFun),
                           {E1 ++ E0, W1 ++ W0}
@@ -255,7 +271,7 @@ validate_nodes(Model, Data, MetaTypeId, Nodes) ->
                    , lee:data()
                    , lee:key()
                    , validate_callback()
-                   ) -> {[string()], [string()]}.
+                   ) -> lee_lib:check_result().
 validate_node(Model, Data, NodeId, ValidateFun) ->
     MNode = lee_model:get(NodeId, Model),
     Instances = case lee_model:split_key(NodeId) of
@@ -273,13 +289,10 @@ validate_node(Model, Data, NodeId, ValidateFun) ->
                ).
 
 %% Validate nodes of `value' metatype
--spec validate_value( lee:model()
-                    , lee:data()
-                    , lee:key()
-                    , #mnode{}
-                    ) -> {[string()], [string()]}.
+-spec validate_value(lee:model(), lee:data(), lee:key(), #mnode{}) ->
+                            lee_lib:check_result().
 validate_value(Model, Data, Key, #mnode{metaparams = Attrs}) ->
-    Type = maps:get(type, Attrs),
+    Type = ?m_attr(value, type, Attrs),
     Default = case Attrs of
                   #{default := Default0} ->
                       {ok, Default0};
@@ -289,18 +302,34 @@ validate_value(Model, Data, Key, #mnode{metaparams = Attrs}) ->
     case {lee_storage:get(Key, Data), Default} of
         {{ok, Term}, _} ->
             Result = case typerefl:typecheck(Type, Term) of
-                         ok           -> {ok, []};
-                         {error, Err} -> {error, [Err], []}
+                         ok           -> {[], []};
+                         {error, Err} -> {[Err], []}
                      end,
-            case lee_lib:inject_error_location(Key, Result) of
-                {ok, Warn} ->
-                    {[], Warn};
-                {error, Err1, Warn} ->
-                    {Err1, Warn}
-            end;
+            lee_lib:inject_error_location(Key, Result);
         {undefined, {ok, _}} ->
             {[], []};
         {undefined, undefined} ->
             Err = lee_lib:format("~p: Mandatory value is missing in the config", [Key]),
             {[Err] , []}
+    end.
+
+-spec meta_validate_value(lee:model(), _, lee:key(), #mnode{}) ->
+                            lee_lib:check_result().
+meta_validate_value(_Model, _, Key, #mnode{metaparams = Attrs}) ->
+    lee_lib:perform_checks(Key, Attrs, [ fun lee_doc:check_docstrings/1
+                                       , fun check_type_and_default/1
+                                       ]).
+
+check_type_and_default(Attrs) ->
+    case Attrs of
+        #{type := Type, default := Default} ->
+            case typerefl:typecheck(Type, Default) of
+                ok           -> {[], []};
+                {error, Err} -> {["Mistyped default value: " ++ Err], []}
+            end;
+        #{type := _Type} ->
+            %% TODO: typerefl:is_type?
+            {[], []};
+        _ ->
+            {["missing `type' metaparamter"], []}
     end.

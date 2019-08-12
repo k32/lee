@@ -7,6 +7,7 @@
         , xref_key/1
         , refer_value/4
         , docbook/1
+        , check_docstrings/1
         ]).
 
 -include("lee_internal.hrl").
@@ -61,6 +62,31 @@ docbook([]) ->
 docbook(String) ->
     {Doc, Rest} = xmerl_scan:string(String, [{document, false}]),
     [Doc | docbook(Rest)].
+
+-spec check_docstrings(lee:parameters()) -> lee_lib:check_result().
+check_docstrings(Attrs) ->
+    CheckOneliner = case Attrs of
+                        #{oneliner := Oneliner} ->
+                            case io_lib:char_list(Oneliner) of
+                                true ->
+                                    {[], []};
+                                false ->
+                                    {["`oneliner' attribute should be a string"], []}
+                            end;
+                        _ ->
+                            {[], ["`oneliner' attribute is expected"]}
+                    end,
+    CheckDoc = case Attrs of
+                   #{doc := Doc} ->
+                       try docbook(Doc) of
+                           _ -> {[], []}
+                       catch
+                           _:_ -> {["`doc' attribute is not a valid docbook string"], []}
+                       end;
+                   _ ->
+                       {[], ["`doc' attribute is expected"]}
+               end,
+    lee_lib:compose_checks([CheckOneliner, CheckDoc]).
 
 -spec document_value(lee:model_key(), lee:model()) ->
                             doc().

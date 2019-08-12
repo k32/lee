@@ -1,5 +1,5 @@
 all: linelimit #test/docbook.xsd test/xlink.xsd test/namespace.xsd
-	rebar3 do dialyzer,eunit,ct,edoc
+	rebar3 do dialyzer,eunit,ct,edoc,cover
 
 demo:
 	rebar3 as demo escriptize

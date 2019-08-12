@@ -29,7 +29,7 @@ model() ->
                  #{ type => list(integer())
                   }}
           },
-    {ok, Model} = lee_model:compile([], [M0]),
+    {ok, Model} = lee_model:compile([lee:base_metamodel()], [M0]),
     Model.
 
 from_string_test() ->
