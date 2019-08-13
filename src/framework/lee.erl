@@ -111,9 +111,7 @@ base_metamodel() ->
                       {[metatype], #{}}
                 , doc_root =>
                       {[metatype],
-                       #{ %% doc_chapter_title => "Introduction" TODO
-                        %% , doc_gen           => fun lee_doc:doc_root/2
-                        %% , meta_validate     => fun lee_doc:validate_doc_root/4
+                       #{ meta_validate     => fun lee_doc:validate_doc_root/4
                         }}
                 }
              ).

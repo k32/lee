@@ -8,6 +8,7 @@
         , refer_value/4
         , docbook/1
         , check_docstrings/1
+        , validate_doc_root/4
         ]).
 
 -include("lee_internal.hrl").
@@ -87,6 +88,14 @@ check_docstrings(Attrs) ->
                        {[], ["`doc' attribute is expected"]}
                end,
     lee_lib:compose_checks([CheckOneliner, CheckDoc]).
+
+-spec validate_doc_root(lee:model(), _, lee:key(), #mnode{}) ->
+                               lee_lib:check_result().
+validate_doc_root(_, _, Key, #mnode{metaparams = Attrs}) ->
+    Fun = fun(#{app_name := _}) -> {[], []};
+             (_)                -> {["missing `app_name' parameter"], []}
+          end,
+    lee_lib:perform_checks(Key, Attrs, [fun check_docstrings/1, Fun]).
 
 -spec document_value(lee:model_key(), lee:model()) ->
                             doc().
