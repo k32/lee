@@ -268,6 +268,81 @@ data(Model, CliArgs) ->
 
 Full code of the example can be found [[file:doc/example/example_model2.erl][here]].
 
+* Extracting documentation from the model
+
+It is possible to extract user manuals from a Lee model. First, one
+has to annotate the model with =oneliner= and =doc= metaparameters,
+like in the following example:
+
+#+BEGIN_SRC erlang
+#{ foo =>
+     {[value],
+      #{ oneliner => "This value controls fooing"
+       , type     => integer()
+       , default  => 41
+       , doc      => "<para>This is a long and elaborate description of
+                      the parameter using docbook markup.</para>
+                      <para>It just goes on and on...</para>"
+       }}
+ }.
+#+END_SRC
+
+=oneliner= is a one sentence summary. =doc= is a more elaborate
+description formatted using [[https://docbook.org/][DocBook]] markup. Also element with key
+=['$doc_root']= should be added to the model, it contains general
+information about the application:
+
+#+BEGIN_SRC erlang
+#{ '$doc_root' =>
+     {[doc_root],
+       #{ oneliner  => "This is a test model for doc extraction"
+        , app_name  => "Lee Test Application"
+        , doc       => "<para>Long and elaborate description of this
+                        application</para>"
+          %% Name of executable:
+        , prog_name => "lee_test"
+        }}
+ }.
+#+END_SRC
+
+Then Lee does the job of assembling an intermediate DocBook file from
+the fragments. Finally, [[https://pandoc.org/][pandoc]] is used to transform DocBook to HTML
+([[https://k32.github.io/Lee/Lee%20Test%20Application.html][example]]), manpages, texinfo and what not.
+
+Export of documentation is triggered like this:
+
+#+BEGIN_SRC erlang
+%% List of metatypes that should be mentioned in the documentation,
+%% together with metatype-specific options affecting extraction
+MTs = [ os_env
+      , cli_param
+      , consult
+      , {consult, #{ filter      => [foo]
+                   , config_name => "foo.conf"
+                   }}
+      , {consult, #{ filter      => [bar]
+                   , config_name => "bar.conf"
+                   }}
+      , value
+      ],
+Config = #{ metatypes => MTs
+          , run_pandoc => true
+          },
+lee_doc:make_docs(model(), Config)
+#+END_SRC
+
+** Why DocBook
+
+DocBook is not the most popular and concise markup language, however
+it was chosen because of the following properties:
+
+ + It's the easiest format to assemble from small fragments
+ + It's a supported source format in pandoc
+ + It's whitespace insensitive. Given that the docstrings come from
+   literals embedded into Erlang code, formatting of the source code
+   should not affect the resulting documents. Also it generally
+   focuses on structure rather than representation
+
 * Gathering it all together
 
 All Lee APIs that we discussed so far were stateless. Although being

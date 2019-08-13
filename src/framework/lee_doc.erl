@@ -108,7 +108,7 @@ make_file(Top, Data, Id) ->
                 ],
     Doc = {Top, RootAttrs, Data},
     DocStr = xmerl:export_simple([Doc], xmerl_xml, [{prolog, ""}]),
-    Filename = filename:join("lee_doc", Id ++ ".xml"),
+    Filename = filename:join("docs", Id ++ ".xml"),
     ok = filelib:ensure_dir(Filename),
     {ok, FD} = file:open(Filename, [write]),
     try ok = io:format(FD, "~s~n", [DocStr])

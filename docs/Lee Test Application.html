@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Lee Test Application</title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+  <style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Lee Test Application</h1>
+</header>
+<nav id="TOC">
+<ul>
+<li><a href="#intro">Introduction</a></li>
+<li><a href="#chapter-os_env">OS Environment Variables</a><ul>
+<li><a href="#{os_env,&quot;BAR&quot;}">BAR</a></li>
+</ul></li>
+<li><a href="#chapter-cli_param">CLI Arguments</a><ul>
+<li><a></a><ul>
+<li><a href="#{cli_param,&quot;--both&quot;}">--both</a></li>
+<li><a href="#{cli_param,&quot;--long&quot;}">--long</a></li>
+<li><a href="#{cli_param,&quot;-b&quot;}">-b</a></li>
+<li><a href="#{cli_param,&quot;-f&quot;}">-f</a></li>
+<li><a href="#{cli_param,&quot;-g&quot;}">-g</a></li>
+<li><a href="#{cli_param,&quot;-h&quot;}">-h</a></li>
+<li><a href="#{cli_param,&quot;-s&quot;}">-s</a></li>
+</ul></li>
+<li><a href="#cli-command-action_1">@action_1</a><ul>
+<li><a href="#{cli_param,&quot;--both&quot;}">--both</a></li>
+<li><a href="#{cli_param,&quot;--long&quot;}">--long</a></li>
+<li><a href="#{cli_param,&quot;-b&quot;}">-b</a></li>
+<li><a href="#{cli_param,&quot;-f&quot;}">-f</a></li>
+<li><a href="#{cli_param,&quot;-g&quot;}">-g</a></li>
+<li><a href="#{cli_param,&quot;-h&quot;}">-h</a></li>
+<li><a href="#{cli_param,&quot;-s&quot;}">-s</a></li>
+</ul></li>
+<li><a href="#cli-command-action_2">@action_2</a><ul>
+<li><a href="#{cli_param,&quot;Position: 1&quot;}">Position: 1</a></li>
+<li><a href="#{cli_param,&quot;Position: 2&quot;}">Position: 2</a></li>
+</ul></li>
+<li><a href="#cli-command-action_3">@action_3</a><ul>
+<li><a href="#{cli_param,&quot;Position: rest&quot;}">Position: rest</a></li>
+</ul></li>
+<li><a href="#cli-command-action_4">@action_4</a><ul>
+<li><a href="#{cli_param,&quot;Position: 1&quot;}">Position: 1</a></li>
+<li><a href="#{cli_param,&quot;Position: 2&quot;}">Position: 2</a></li>
+<li><a href="#{cli_param,&quot;Position: rest&quot;}">Position: rest</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#chapter-consult">Configuration file: configuration.eterm</a><ul>
+<li><a href="#{consult,&quot;quux&quot;}">quux</a></li>
+<li><a href="#{consult,&quot;xizzy&quot;}">xizzy</a></li>
+</ul></li>
+<li><a href="#chapter-consult">Configuration file: foo.conf</a><ul>
+<li><a href="#{consult,&quot;quux&quot;}">quux</a></li>
+</ul></li>
+<li><a href="#chapter-consult">Configuration file: bar.conf</a><ul>
+<li><a href="#{consult,&quot;xizzy&quot;}">xizzy</a></li>
+</ul></li>
+<li><a href="#chapter-value">Values</a><ul>
+<li><a href="#[bar]">[bar]</a></li>
+<li><a href="#[baz]">[baz]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,both]">[cli,action_1,'$children',both]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,flag1]">[cli,action_1,'$children',flag1]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,flag2]">[cli,action_1,'$children',flag2]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,flag3]">[cli,action_1,'$children',flag3]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,long]">[cli,action_1,'$children',long]</a></li>
+<li><a href="#[cli,action_1,&#39;$children&#39;,short]">[cli,action_1,'$children',short]</a></li>
+<li><a href="#[cli,action_2,&#39;$children&#39;,posn_1]">[cli,action_2,'$children',posn_1]</a></li>
+<li><a href="#[cli,action_2,&#39;$children&#39;,posn_2]">[cli,action_2,'$children',posn_2]</a></li>
+<li><a href="#[cli,action_3,&#39;$children&#39;,posn_n]">[cli,action_3,'$children',posn_n]</a></li>
+<li><a href="#[cli,action_4,&#39;$children&#39;,posn_1]">[cli,action_4,'$children',posn_1]</a></li>
+<li><a href="#[cli,action_4,&#39;$children&#39;,posn_2]">[cli,action_4,'$children',posn_2]</a></li>
+<li><a href="#[cli,action_4,&#39;$children&#39;,posn_n]">[cli,action_4,'$children',posn_n]</a></li>
+<li><a href="#[cli,foo,both]">[cli,foo,both]</a></li>
+<li><a href="#[cli,foo,flag1]">[cli,foo,flag1]</a></li>
+<li><a href="#[cli,foo,flag2]">[cli,foo,flag2]</a></li>
+<li><a href="#[cli,foo,flag3]">[cli,foo,flag3]</a></li>
+<li><a href="#[cli,foo,long]">[cli,foo,long]</a></li>
+<li><a href="#[cli,foo,short]">[cli,foo,short]</a></li>
+<li><a href="#[foo]">[foo]</a></li>
+<li><a href="#[quux]">[quux]</a></li>
+<li><a href="#[xizzy]">[xizzy]</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="intro">Introduction</h1>
+<p>This is a test model for doc extraction</p>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce convallis nibh vel consectetur consequat. Nunc vitae ex eu lorem vulputate bibendum vel quis nibh. Maecenas vulputate purus a tincidunt bibendum. Proin scelerisque ligula elementum leo auctor, et accumsan velit pellentesque. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Proin convallis rutrum lorem, ut facilisis lectus consectetur sed. Cras in ullamcorper eros. Praesent quis dui quis arcu condimentum viverra quis dapibus ex. Integer ultricies laoreet nulla, vitae mollis sem tristique a. Maecenas in turpis eu odio sodales pellentesque vitae sed sem. Cras in ullamcorper diam.</p>
+<p>Aliquam auctor sed ante eu pellentesque. Suspendisse tincidunt elit sit amet fringilla sollicitudin. Quisque finibus metus quis ipsum semper, in consectetur justo tincidunt. Nunc lacinia lorem vitae condimentum consequat. Nam egestas ut mi vel porttitor. Proin tempus magna quis nulla feugiat, et blandit massa tristique. Donec ut eros massa. Cras ac gravida purus, ut rhoncus tellus. Praesent nec eros pellentesque, varius nisl vitae, auctor magna.</p>
+<p>Etiam varius nisi ut aliquam tempus. Sed tempor, magna id blandit egestas, augue erat sollicitudin sem, ac condimentum lorem eros ut ante. Ut odio risus, mattis sed vulputate nec, semper ac nulla. Aliquam mollis tincidunt mi quis volutpat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam nisi odio, auctor quis sem quis, egestas placerat ipsum. Vivamus est orci, tempor cursus feugiat vel, fermentum et est. Etiam non nunc ac ex viverra aliquet ac et lectus. Aliquam sodales fermentum odio, in tincidunt elit aliquam id. Etiam id neque sed felis scelerisque vestibulum. Quisque non magna justo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nulla convallis dapibus imperdiet. Nam vehicula pharetra ipsum in laoreet.<a href="#[foo]">[foo]</a></p>
+<p>Donec erat massa, molestie et auctor vel, commodo vel orci. Nam sollicitudin sit amet ligula vitae bibendum. Nam sed sem vehicula, auctor velit ac, euismod metus. Mauris ultrices quam non massa sagittis, ut rutrum quam interdum. <em>Aenean varius rhoncus turpis nec convallis.</em> Duis sodales sodales tempus. Vestibulum id ante sodales justo ornare sagittis. Nunc vitae ornare diam, nec mattis mi.</p>
+<p>Sed nunc justo, dignissim quis aliquam non, suscipit et orci. Curabitur mollis magna ac nunc mattis, sed condimentum felis iaculis. Mauris sollicitudin, nisl nec auctor rhoncus, ipsum lacus finibus leo, efficitur facilisis ex nisi vel ipsum. Sed tempor ornare efficitur. Aliquam erat volutpat. Nulla sit amet euismod turpis. Nunc rutrum ex sit amet ligula consequat, a lobortis purus dignissim. Curabitur dolor ante, mollis at malesuada semper, semper quis arcu. Curabitur in purus fermentum, suscipit diam eleifend, dictum augue. Pellentesque bibendum nisi sit amet aliquet accumsan. Donec non justo in ex vehicula posuere vel ut purus. Aenean vestibulum nulla at ante ultricies bibendum. Aliquam erat volutpat. Integer pellentesque sit amet felis viverra imperdiet. Pellentesque dapibus ipsum in magna ultrices consectetur. Suspendisse non est ex.</p>
+<h1 id="chapter-os_env">OS Environment Variables</h1>
+<p>The following OS environment variables are used to set configuration values. Values of type string() are taken from OS environment variables verbatim, other types are parsed as Erlang terms.</p>
+<h2 id="{os_env,&quot;BAR&quot;}">BAR</h2>
+<p>This parameter controls baring, see: <a href="#[bar]">[bar]</a></p>
+<h1 id="chapter-cli_param">CLI Arguments</h1>
+<h2></h2>
+<h3 id="{cli_param,&quot;--both&quot;}">--both</h3>
+<p>This can be set via short or long argument, see: <a href="#[cli,foo,both]">[cli,foo,both]</a></p>
+<h3 id="{cli_param,&quot;--long&quot;}">--long</h3>
+<p>An example of a long CLI argument, see: <a href="#[cli,foo,long]">[cli,foo,long]</a></p>
+<h3 id="{cli_param,&quot;-b&quot;}">-b</h3>
+<p>This can be set via short or long argument, see: <a href="#[cli,foo,both]">[cli,foo,both]</a></p>
+<h3 id="{cli_param,&quot;-f&quot;}">-f</h3>
+<p>Flag1, see: <a href="#[cli,foo,flag1]">[cli,foo,flag1]</a></p>
+<h3 id="{cli_param,&quot;-g&quot;}">-g</h3>
+<p>Some flag, see: <a href="#[cli,foo,flag2]">[cli,foo,flag2]</a></p>
+<h3 id="{cli_param,&quot;-h&quot;}">-h</h3>
+<p>Another flag, see: <a href="#[cli,foo,flag3]">[cli,foo,flag3]</a></p>
+<h3 id="{cli_param,&quot;-s&quot;}">-s</h3>
+<p>An example of a short CLI argument, see: <a href="#[cli,foo,short]">[cli,foo,short]</a></p>
+<h2 id="cli-command-action_1">@action_1</h2>
+<p>This is a test CLI action. It does stuff</p>
+<p>This is a long and elaborate documentation of a CLI action</p>
+<p>Blah blah blah</p>
+<h3 id="{cli_param,&quot;--both&quot;}">--both</h3>
+<p>This can be set via short or long argument, see: <a href="#[cli,action_1,&#39;$children&#39;,both]">[cli,action_1,'$children',both]</a></p>
+<h3 id="{cli_param,&quot;--long&quot;}">--long</h3>
+<p>An example of a long CLI argument, see: <a href="#[cli,action_1,&#39;$children&#39;,long]">[cli,action_1,'$children',long]</a></p>
+<h3 id="{cli_param,&quot;-b&quot;}">-b</h3>
+<p>This can be set via short or long argument, see: <a href="#[cli,action_1,&#39;$children&#39;,both]">[cli,action_1,'$children',both]</a></p>
+<h3 id="{cli_param,&quot;-f&quot;}">-f</h3>
+<p>Flag1, see: <a href="#[cli,action_1,&#39;$children&#39;,flag1]">[cli,action_1,'$children',flag1]</a></p>
+<h3 id="{cli_param,&quot;-g&quot;}">-g</h3>
+<p>Some flag, see: <a href="#[cli,action_1,&#39;$children&#39;,flag2]">[cli,action_1,'$children',flag2]</a></p>
+<h3 id="{cli_param,&quot;-h&quot;}">-h</h3>
+<p>Another flag, see: <a href="#[cli,action_1,&#39;$children&#39;,flag3]">[cli,action_1,'$children',flag3]</a></p>
+<h3 id="{cli_param,&quot;-s&quot;}">-s</h3>
+<p>An example of a short CLI argument, see: <a href="#[cli,action_1,&#39;$children&#39;,short]">[cli,action_1,'$children',short]</a></p>
+<h2 id="cli-command-action_2">@action_2</h2>
+<p>This is a test CLI action. It does stuff</p>
+<p>This is a long and elaborate documentation of a CLI action</p>
+<p>Blah blah blah</p>
+<h3 id="{cli_param,&quot;Position: 1&quot;}">Position: 1</h3>
+<p>, see: <a href="#[cli,action_2,&#39;$children&#39;,posn_1]">[cli,action_2,'$children',posn_1]</a></p>
+<h3 id="{cli_param,&quot;Position: 2&quot;}">Position: 2</h3>
+<p>, see: <a href="#[cli,action_2,&#39;$children&#39;,posn_2]">[cli,action_2,'$children',posn_2]</a></p>
+<h2 id="cli-command-action_3">@action_3</h2>
+<p>This is a test CLI action. It does stuff</p>
+<p>This is a long and elaborate documentation of a CLI action</p>
+<p>Blah blah blah</p>
+<h3 id="{cli_param,&quot;Position: rest&quot;}">Position: rest</h3>
+<p>, see: <a href="#[cli,action_3,&#39;$children&#39;,posn_n]">[cli,action_3,'$children',posn_n]</a></p>
+<h2 id="cli-command-action_4">@action_4</h2>
+<p>This is a test CLI action. It does stuff</p>
+<p>This is a long and elaborate documentation of a CLI action</p>
+<p>Blah blah blah</p>
+<h3 id="{cli_param,&quot;Position: 1&quot;}">Position: 1</h3>
+<p>, see: <a href="#[cli,action_4,&#39;$children&#39;,posn_1]">[cli,action_4,'$children',posn_1]</a></p>
+<h3 id="{cli_param,&quot;Position: 2&quot;}">Position: 2</h3>
+<p>, see: <a href="#[cli,action_4,&#39;$children&#39;,posn_2]">[cli,action_4,'$children',posn_2]</a></p>
+<h3 id="{cli_param,&quot;Position: rest&quot;}">Position: rest</h3>
+<p>, see: <a href="#[cli,action_4,&#39;$children&#39;,posn_n]">[cli,action_4,'$children',posn_n]</a></p>
+<h1 id="chapter-consult">Configuration file: configuration.eterm</h1>
+<p>Configuration file is an Erlang term that can be in either proplist:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb1-1" title="1"></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="fu">{</span><span class="ch">key1</span><span class="fu">,</span> <span class="va">Val1</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="fu">{</span><span class="ch">key2</span><span class="fu">,</span> <span class="va">Val2</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="fu">...</span></a></code></pre></div>
+<p>or map form:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb2-1" title="1"></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="fu">#{</span> <span class="ch">key1</span> <span class="op">=&gt;</span> <span class="va">Val1</span></a>
+<a class="sourceLine" id="cb2-3" title="3"> <span class="fu">,</span> <span class="ch">key2</span> <span class="op">=&gt;</span> <span class="va">Val2</span></a>
+<a class="sourceLine" id="cb2-4" title="4"> <span class="fu">}.</span></a></code></pre></div>
+<p><em>Valid keys:</em></p>
+<h2 id="{consult,&quot;quux&quot;}">quux</h2>
+<p>This value controls quuxing, see: <a href="#[quux]">[quux]</a></p>
+<h2 id="{consult,&quot;xizzy&quot;}">xizzy</h2>
+<p>This value controls xizzying, see: <a href="#[xizzy]">[xizzy]</a></p>
+<h1 id="chapter-consult">Configuration file: foo.conf</h1>
+<p>Configuration file is an Erlang term that can be in either proplist:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb3-1" title="1"></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="fu">{</span><span class="ch">key1</span><span class="fu">,</span> <span class="va">Val1</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="fu">{</span><span class="ch">key2</span><span class="fu">,</span> <span class="va">Val2</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="fu">...</span></a></code></pre></div>
+<p>or map form:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb4-1" title="1"></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="fu">#{</span> <span class="ch">key1</span> <span class="op">=&gt;</span> <span class="va">Val1</span></a>
+<a class="sourceLine" id="cb4-3" title="3"> <span class="fu">,</span> <span class="ch">key2</span> <span class="op">=&gt;</span> <span class="va">Val2</span></a>
+<a class="sourceLine" id="cb4-4" title="4"> <span class="fu">}.</span></a></code></pre></div>
+<p><em>Valid keys:</em></p>
+<h2 id="{consult,&quot;quux&quot;}">quux</h2>
+<p>This value controls quuxing, see: <a href="#[quux]">[quux]</a></p>
+<h1 id="chapter-consult">Configuration file: bar.conf</h1>
+<p>Configuration file is an Erlang term that can be in either proplist:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb5-1" title="1"></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="fu">{</span><span class="ch">key1</span><span class="fu">,</span> <span class="va">Val1</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="fu">{</span><span class="ch">key2</span><span class="fu">,</span> <span class="va">Val2</span><span class="fu">}.</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="fu">...</span></a></code></pre></div>
+<p>or map form:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb6-1" title="1"></a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="fu">#{</span> <span class="ch">key1</span> <span class="op">=&gt;</span> <span class="va">Val1</span></a>
+<a class="sourceLine" id="cb6-3" title="3"> <span class="fu">,</span> <span class="ch">key2</span> <span class="op">=&gt;</span> <span class="va">Val2</span></a>
+<a class="sourceLine" id="cb6-4" title="4"> <span class="fu">}.</span></a></code></pre></div>
+<p><em>Valid keys:</em></p>
+<h2 id="{consult,&quot;xizzy&quot;}">xizzy</h2>
+<p>This value controls xizzying, see: <a href="#[xizzy]">[xizzy]</a></p>
+<h1 id="chapter-value">Values</h1>
+<h2 id="[bar]">[bar]</h2>
+<p>This parameter controls baring</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb7-1" title="1"><span class="fu">{[[],...],</span> <span class="fu">iolist()}</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb7-2" title="2">  <span class="fu">byte()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">255</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb7-3" title="3">  <span class="fu">iolist()</span> <span class="fu">::</span> <span class="fu">maybe_improper_list(iolist()</span> <span class="fu">|</span> <span class="fu">binary()</span> <span class="fu">|</span> <span class="fu">byte(),</span> <span class="fu">binary()</span> <span class="fu">|</span> <span class="fu">[]).</span></a></code></pre></div>
+<h2 id="[baz]">[baz]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb8-1" title="1"><span class="fu">{[[],...],</span> <span class="fu">iolist()}</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb8-2" title="2">  <span class="fu">byte()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">255</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb8-3" title="3">  <span class="fu">iolist()</span> <span class="fu">::</span> <span class="fu">maybe_improper_list(iolist()</span> <span class="fu">|</span> <span class="fu">binary()</span> <span class="fu">|</span> <span class="fu">byte(),</span> <span class="fu">binary()</span> <span class="fu">|</span> <span class="fu">[]).</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,both]">[cli,action_1,'$children',both]</h2>
+<p>This can be set via short or long argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb9-1" title="1"><span class="fu">{</span><span class="ch">foo</span><span class="fu">,</span> <span class="fu">integer()}</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,flag1]">[cli,action_1,'$children',flag1]</h2>
+<p>Flag1</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb10-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,flag2]">[cli,action_1,'$children',flag2]</h2>
+<p>Some flag</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb11-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,flag3]">[cli,action_1,'$children',flag3]</h2>
+<p>Another flag</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb12-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,long]">[cli,action_1,'$children',long]</h2>
+<p>An example of a long CLI argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb13-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb13-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb13-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<p><em>Default value:</em></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb14-1" title="1"><span class="st">&quot;default&quot;</span></a></code></pre></div>
+<h2 id="[cli,action_1,&#39;$children&#39;,short]">[cli,action_1,'$children',short]</h2>
+<p>An example of a short CLI argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb15-1" title="1"><span class="fu">integer()</span></a></code></pre></div>
+<h2 id="[cli,action_2,&#39;$children&#39;,posn_1]">[cli,action_2,'$children',posn_1]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb16-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb16-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb16-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<h2 id="[cli,action_2,&#39;$children&#39;,posn_2]">[cli,action_2,'$children',posn_2]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb17-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb17-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb17-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<h2 id="[cli,action_3,&#39;$children&#39;,posn_n]">[cli,action_3,'$children',posn_n]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb18-1" title="1"><span class="fu">[atom()]</span></a></code></pre></div>
+<h2 id="[cli,action_4,&#39;$children&#39;,posn_1]">[cli,action_4,'$children',posn_1]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb19-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb19-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb19-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<h2 id="[cli,action_4,&#39;$children&#39;,posn_2]">[cli,action_4,'$children',posn_2]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb20-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb20-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb20-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<h2 id="[cli,action_4,&#39;$children&#39;,posn_n]">[cli,action_4,'$children',posn_n]</h2>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb21-1" title="1"><span class="fu">[atom()]</span></a></code></pre></div>
+<h2 id="[cli,foo,both]">[cli,foo,both]</h2>
+<p>This can be set via short or long argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb22-1" title="1"><span class="fu">{</span><span class="ch">foo</span><span class="fu">,</span> <span class="fu">integer()}</span></a></code></pre></div>
+<h2 id="[cli,foo,flag1]">[cli,foo,flag1]</h2>
+<p>Flag1</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb23-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,foo,flag2]">[cli,foo,flag2]</h2>
+<p>Some flag</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb24-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,foo,flag3]">[cli,foo,flag3]</h2>
+<p>Another flag</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb25-1" title="1"><span class="fu">boolean()</span></a></code></pre></div>
+<h2 id="[cli,foo,long]">[cli,foo,long]</h2>
+<p>An example of a long CLI argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb26-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb26-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb26-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<p><em>Default value:</em></p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb27-1" title="1"><span class="st">&quot;default&quot;</span></a></code></pre></div>
+<h2 id="[cli,foo,short]">[cli,foo,short]</h2>
+<p>An example of a short CLI argument</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb28-1" title="1"><span class="fu">integer()</span></a></code></pre></div>
+<h2 id="[foo]">[foo]</h2>
+<p>This parameter controls fooing</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb29-1" title="1"><span class="fu">string()</span> <span class="ch">when</span></a>
+<a class="sourceLine" id="cb29-2" title="2">  <span class="fu">char()</span> <span class="fu">::</span> <span class="dv">0</span><span class="fu">..</span><span class="dv">1114111</span><span class="fu">,</span></a>
+<a class="sourceLine" id="cb29-3" title="3">  <span class="fu">string()</span> <span class="fu">::</span> <span class="fu">[char()].</span></a></code></pre></div>
+<p><em>Default value:</em></p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb30-1" title="1"><span class="st">&quot;foo&quot;</span></a></code></pre></div>
+<p><em>Description:</em></p>
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce convallis nibh vel consectetur consequat. Nunc vitae ex eu lorem vulputate bibendum vel quis nibh. Maecenas vulputate purus a tincidunt bibendum. Proin scelerisque ligula elementum leo auctor, et accumsan velit pellentesque. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Proin convallis rutrum lorem, ut facilisis lectus consectetur sed. Cras in ullamcorper eros. Praesent quis dui quis arcu condimentum viverra quis dapibus ex. Integer ultricies laoreet nulla, vitae mollis sem tristique a. Maecenas in turpis eu odio sodales pellentesque vitae sed sem. Cras in ullamcorper diam.</p>
+<p>Aliquam auctor sed ante eu pellentesque. Suspendisse tincidunt elit sit amet fringilla sollicitudin. Quisque finibus metus quis ipsum semper, in consectetur justo tincidunt. Nunc lacinia lorem vitae condimentum consequat. Nam egestas ut mi vel porttitor. Proin tempus magna quis nulla feugiat, et blandit massa tristique. Donec ut eros massa. Cras ac gravida purus, ut rhoncus tellus. Praesent nec eros pellentesque, varius nisl vitae, auctor magna.</p>
+<p>Etiam varius nisi ut aliquam tempus. Sed tempor, magna id blandit egestas, augue erat sollicitudin sem, ac condimentum lorem eros ut ante. Ut odio risus, mattis sed vulputate nec, semper ac nulla. Aliquam mollis tincidunt mi quis volutpat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam nisi odio, auctor quis sem quis, egestas placerat ipsum. Vivamus est orci, tempor cursus feugiat vel, fermentum et est. Etiam non nunc ac ex viverra aliquet ac et lectus. Aliquam sodales fermentum odio, in tincidunt elit aliquam id. Etiam id neque sed felis scelerisque vestibulum. Quisque non magna justo. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nulla convallis dapibus imperdiet. Nam vehicula pharetra ipsum in laoreet.<a href="#[foo]">[foo]</a></p>
+<p>Donec erat massa, molestie et auctor vel, commodo vel orci. Nam sollicitudin sit amet ligula vitae bibendum. Nam sed sem vehicula, auctor velit ac, euismod metus. Mauris ultrices quam non massa sagittis, ut rutrum quam interdum. <em>Aenean varius rhoncus turpis nec convallis.</em> Duis sodales sodales tempus. Vestibulum id ante sodales justo ornare sagittis. Nunc vitae ornare diam, nec mattis mi.</p>
+<p>Sed nunc justo, dignissim quis aliquam non, suscipit et orci. Curabitur mollis magna ac nunc mattis, sed condimentum felis iaculis. Mauris sollicitudin, nisl nec auctor rhoncus, ipsum lacus finibus leo, efficitur facilisis ex nisi vel ipsum. Sed tempor ornare efficitur. Aliquam erat volutpat. Nulla sit amet euismod turpis. Nunc rutrum ex sit amet ligula consequat, a lobortis purus dignissim. Curabitur dolor ante, mollis at malesuada semper, semper quis arcu. Curabitur in purus fermentum, suscipit diam eleifend, dictum augue. Pellentesque bibendum nisi sit amet aliquet accumsan. Donec non justo in ex vehicula posuere vel ut purus. Aenean vestibulum nulla at ante ultricies bibendum. Aliquam erat volutpat. Integer pellentesque sit amet felis viverra imperdiet. Pellentesque dapibus ipsum in magna ultrices consectetur. Suspendisse non est ex.</p>
+<h2 id="[quux]">[quux]</h2>
+<p>This value controls quuxing</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb31-1" title="1"><span class="fu">integer()</span></a></code></pre></div>
+<h2 id="[xizzy]">[xizzy]</h2>
+<p>This value controls xizzying</p>
+<p><em>Type:</em></p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode erlang"><code class="sourceCode erlang"><a class="sourceLine" id="cb32-1" title="1"><span class="fu">float()</span></a></code></pre></div>
+</body>
+</html>

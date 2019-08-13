@@ -113,7 +113,7 @@ model() ->
 
 export_test() ->
     MTs = [ os_env
-          , {cli_param, #{prog_name => "lee_test"}}
+          , cli_param
           , consult
           , {consult, #{ filter      => [foo]
                        , config_name => "foo.conf"
@@ -123,8 +123,7 @@ export_test() ->
                        }}
           , value
           ],
-    Config = #{ app_name => "Lee Demo"
-              , metatypes => MTs
+    Config = #{ metatypes => MTs
               , run_pandoc => true
               },
     lee_doc:make_docs(model(), Config).
