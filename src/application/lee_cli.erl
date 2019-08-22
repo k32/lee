@@ -40,18 +40,17 @@ metamodel() ->
     #{metatype =>
           #{ cli_param =>
                  {[metatype, documented]
-                 , #{ validate_mo => fun(_,_,_,_) -> ok end
-                    , doc_chapter_title => "CLI Arguments"
+                 , #{ doc_chapter_title => "CLI Arguments"
                     , doc_gen => fun ?MODULE:doc_gen/2
                     }
                  }
            , cli_action =>
                  {[metatype]
-                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 , #{}
                  }
            , cli_positional =>
                  {[metatype]
-                 , #{validate_mo => fun(_,_,_,_) -> ok end}
+                 , #{}
                  }
            }
      }.
@@ -261,7 +260,7 @@ mk_index(Key, #mnode{metatypes = Meta, metaparams = Attrs}, Acc, Scope) ->
             SC = add_positional(Key, Attrs, maps:get(Scope, Acc)),
             {Acc #{Scope => SC}, Scope};
         {false, false, true} -> %% CLI action
-            NewScope = maps:get(cli_operand, Attrs),
+            NewScope = ?m_attr(cil_action, cli_operand, Attrs),
             SC = #sc{ name = NewScope
                     , parent = Key
                     },

@@ -12,6 +12,7 @@
         ]).
 
 -include("lee_internal.hrl").
+-include_lib("typerefl/include/types.hrl").
 
 -type doc() :: term().
 
@@ -66,17 +67,11 @@ docbook(String) ->
 
 -spec check_docstrings(lee:parameters()) -> lee_lib:check_result().
 check_docstrings(Attrs) ->
-    CheckOneliner = case Attrs of
-                        #{oneliner := Oneliner} ->
-                            case io_lib:char_list(Oneliner) of
-                                true ->
-                                    {[], []};
-                                false ->
-                                    {["`oneliner' attribute should be a string"], []}
-                            end;
-                        _ ->
-                            {[], ["`oneliner' attribute is expected"]}
-                    end,
+    CheckOneliner = lee_lib:validate_optional_meta_attr( oneliner
+                                                       , printable_unicode_list()
+                                                       , Attrs
+                                                       , true
+                                                       ),
     CheckDoc = case Attrs of
                    #{doc := Doc} ->
                        try docbook(Doc) of

@@ -12,6 +12,9 @@
         , compose_checks/1
         , perform_checks/3
         , run_cmd/2
+        , validate_optional_meta_attr/3
+        , validate_optional_meta_attr/4
+        , validate_meta_attr/3
         ]).
 
 -export_type([check_result/0]).
@@ -132,3 +135,48 @@ compose_checks(L) ->
 perform_checks(Key, Attrs, CheckFuns) ->
     CheckResults = [F(Attrs) || F <- CheckFuns],
     inject_error_location(Key, compose_checks(CheckResults)).
+
+-spec validate_optional_meta_attr( atom()
+                                 , typerefl:type()
+                                 , lee:properties() | #mnode{}
+                                 , boolean()
+                                 ) -> lee:validate_result().
+validate_optional_meta_attr(Attr, Type, #mnode{metaparams = MP}, WarnIfAbsent) ->
+    validate_optional_meta_attr(Attr, Type, MP, WarnIfAbsent);
+validate_optional_meta_attr(Attr, Type, Params, WarnIfAbsent) ->
+    case Params of
+        #{Attr := _} ->
+            validate_meta_attr(Attr, Type, Params);
+        _ when WarnIfAbsent ->
+            Warn = format("Missing attribute ~p", [Attr]),
+            {[], [Warn]};
+        _ ->
+            {[], []}
+    end.
+
+-spec validate_optional_meta_attr( atom()
+                                 , typerefl:type()
+                                 , lee:properties() | #mnode{}
+                                 ) -> lee:validate_result().
+validate_optional_meta_attr(Attr, Type, #mnode{metaparams = MP}) ->
+    validate_optional_meta_attr(Attr, Type, MP, false).
+
+-spec validate_meta_attr( atom()
+                        , typerefl:type()
+                        , lee:properties() | #mnode{}
+                        ) -> lee:validate_result().
+validate_meta_attr(Attr, Type, #mnode{metaparams = MP}) ->
+    validate_meta_attr(Attr, Type, MP);
+validate_meta_attr(Attr, Type, Params) ->
+    case Params of
+        #{Attr := Val} ->
+            case typerefl:typecheck(Type, Val) of
+                ok ->
+                    {[], []};
+                {error, Err} ->
+                    {[Err], []}
+            end;
+        _ ->
+            Err = format("Expeted mandatory meta-parameter ~p", [Attr]),
+            {[Err], []}
+    end.

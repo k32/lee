@@ -35,11 +35,8 @@ metamodel() ->
 
 -spec meta_validate(lee:model(), _, lee:key(), #mnode{}) ->
                             lee_lib:check_result().
-meta_validate(_, _, Key, #mnode{metaparams = Attrs}) ->
-    case Attrs of
-        #{file_key := _} -> {[], []};
-        _                -> {["missing `file_key' attribute"], []}
-    end.
+meta_validate(_, _, Key, MNode) ->
+    lee_lib:validate_meta_attr(file_key, typerefl:atom(), MNode).
 
 %% @doc Parse file into a `lee_storage'
 %% @throws {error, string()}

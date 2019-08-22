@@ -26,18 +26,11 @@ metamodel() ->
 
 -spec meta_validate(lee:model(), _, lee:key(), #mnode{}) ->
                             lee_lib:check_result().
-meta_validate(_, _, Key, #mnode{metaparams = Attrs}) ->
-    case Attrs of
-        #{os_env := Env} ->
-            case io_lib:printable_latin1_list(Env) of
-                true ->
-                    {[], []};
-                false ->
-                    {["`os_env' attribute should be a latin1 string"], []}
-            end;
-        _ ->
-            {["missing `os_env' attribute"], []}
-    end.
+meta_validate(_, _, Key, MNode) ->
+    lee_lib:validate_meta_attr( os_env
+                              , typerefl:printable_latin1_list()
+                              , MNode
+                              ).
 
 %% @doc Make a patch from OS environment variables
 %% @throws {error, string()}
