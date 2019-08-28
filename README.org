@@ -307,7 +307,7 @@ information about the application:
 
 Then Lee does the job of assembling an intermediate DocBook file from
 the fragments. Finally, [[https://pandoc.org/][pandoc]] is used to transform DocBook to HTML
-([[https://k32.github.io/Lee/docs/Lee%20Test%20Application.html][example]]), manpages, texinfo and what not.
+([[https://k32.github.io/Lee/Lee%20Test%20Application.html][example]]), manpages, texinfo and what not.
 
 Export of documentation is triggered like this:
 
