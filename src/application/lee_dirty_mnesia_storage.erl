@@ -1,8 +1,8 @@
 %% @doc Simple storage backend based on dirty Mnesia reads
 %%
 %% This storage backend is read-only, patching is not supported (and
-%% creation too, for this matter). Therefore this backend can only be
-%% only used as a dirty view of a transactional Mnesia storage
+%% creation too, for that matter). Therefore this backend can only be
+%% used as a dirty view of a transactional Mnesia storage
 -module(lee_dirty_mnesia_storage).
 
 -behavior(lee_storage).
