@@ -1,3 +1,4 @@
+%% @doc Utilities for extracting documentation from the model
 -module(lee_doc).
 
 -export([make_docs/2, document_values/2]).
@@ -25,12 +26,14 @@
 
 -export_type([doc/0, doc_options/0]).
 
+%% @doc Represent text as Erlang code
 -spec erlang_listing(iolist()) -> doc().
 erlang_listing(Str) ->
     { programlisting, [{language, "erlang"}]
     , [Str]
     }.
 
+%% @doc Make a simple subsection
 -spec simplesect(string(), iolist() | [doc()]) -> doc().
 simplesect(Title, Doc0) ->
     Doc = case io_lib:deep_char_list(Doc0) of
@@ -41,11 +44,14 @@ simplesect(Title, Doc0) ->
           end,
     {para, [{emphasis, [Title]} | Doc]}.
 
+%% @doc Generate a link to the description of a value
 -spec xref_key(lee:key()) -> doc().
 xref_key(Key) ->
     Node = lee_lib:format("~p", [Key]),
     {xref, [{linkend, Node}], []}.
 
+%% @doc Generate a section that contains short description of a value
+%% and a link to the full description
 -spec refer_value(lee:model_key(), lee:metatype(), string(), #mnode{}) ->
                          doc().
 refer_value(Key, Metatype, Title, MNode) ->
@@ -58,6 +64,10 @@ refer_value(Key, Metatype, Title, MNode) ->
       ]
     }.
 
+%% @doc Parse string as list of XML nodes. Example:
+%% ```
+%% lee_doc:docbook("<para>Some text</para>
+%%                  <para>More text</para>")'''
 -spec docbook(string()) -> [doc()].
 docbook([]) ->
     [];
@@ -65,6 +75,7 @@ docbook(String) ->
     {Doc, Rest} = xmerl_scan:string(String, [{document, false}]),
     [Doc | docbook(Rest)].
 
+%% @private Meta-validation of docstrings
 -spec check_docstrings(lee:parameters()) -> lee_lib:check_result().
 check_docstrings(Attrs) ->
     CheckOneliner = lee_lib:validate_optional_meta_attr( oneliner
@@ -84,6 +95,7 @@ check_docstrings(Attrs) ->
                end,
     lee_lib:compose_checks([CheckOneliner, CheckDoc]).
 
+%% @private Meta-validation of doc root
 -spec validate_doc_root(lee:model(), _, lee:key(), #mnode{}) ->
                                lee_lib:check_result().
 validate_doc_root(_, _, Key, #mnode{metaparams = Attrs}) ->
@@ -92,6 +104,7 @@ validate_doc_root(_, _, Key, #mnode{metaparams = Attrs}) ->
           end,
     lee_lib:perform_checks(Key, Attrs, [fun check_docstrings/1, Fun]).
 
+%% @private
 -spec document_value(lee:model_key(), lee:model()) ->
                             doc().
 document_value(Key, Model) ->
@@ -124,12 +137,14 @@ document_value(Key, Model) ->
       ] ++ Default ++ Description
     }.
 
+%% @private
 -spec document_values(lee:model(), _Config) -> doc().
 document_values(Model, _Config) ->
     #model{meta_class_idx = Idx} = Model,
     Keys = maps:get(value, Idx, []),
     [document_value(Key, Model) || Key <- Keys].
 
+%% @private
 -spec make_file(atom(), doc(), string()) -> file:filename().
 make_file(Top, Data, Id) ->
     RootAttrs = [ {xmlns, "http://docbook.org/ns/docbook"}
@@ -147,6 +162,7 @@ make_file(Top, Data, Id) ->
     end,
     Filename.
 
+%% @private
 -spec metatype_docs( lee:metatype() | {lee:metatype(), term()}
                    , lee:model()
                    ) -> doc().

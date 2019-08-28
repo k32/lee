@@ -30,7 +30,8 @@ format(Fmt, Attrs) ->
 make_nested_patch(_Model, [], Children) ->
     [{set, K, V} || {K, V} <- maps:to_list(Children)];
 make_nested_patch(Model, Parent, Children) ->
-    #mnode{metaparams = #{?key_elements := KeyElems}} = lee_model:get(Parent, Model),
+    #mnode{metaparams = MAttrs} = lee_model:get(Parent, Model),
+    KeyElems = ?m_attr(map, ?key_elements, MAttrs, []),
     MakeChildKey =
         fun(K) ->
                 case Children of

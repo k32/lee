@@ -238,7 +238,7 @@ children_test() ->
 rest1_test() ->
     {ok, Data} = read_cli("@action_3 foo quux 1"),
     ?assertMatch( {ok, [foo, quux, '1']}
-                , lee_storage:get([action_3, ?lcl([]), posn_n], Data)
+                , lee_storage:get([action_3, ?lsngl, posn_n], Data)
                 ).
 
 rest2_test() ->
@@ -267,5 +267,5 @@ no_key_test() ->
 rest_empty_list_test() ->
     {ok, Data} = read_cli("@action_3"),
     ?assertMatch( {ok, []}
-                , catch lee_storage:get([action_3, ?lcl([]), posn_n], Data)
+                , catch lee_storage:get([action_3, ?lsngl, posn_n], Data)
                 ).

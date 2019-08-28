@@ -1,3 +1,27 @@
+%% @doc Read configuration from eterm files
+%%
+%% This module accepts files that looks like this:
+%% ```
+%% {key1, Value1}.
+%% {key2, Value2}.
+%% ...'''
+%% or this:
+%% ```
+%% #{key1 => Value1
+%%  ,key2 => Value2
+%%  ...
+%%  }'''
+%%
+%% Note that keys don't match directly with the model keys. Instead
+%% `file_key' metaparameter is used to specify which key in the
+%% configuration file maps to a given mnode.
+%%
+%% == Example ==
+%% ```
+%% #{foo => {[value, consult],
+%%           #{ file_key => key1
+%%            }}
+%%  }'''
 -module(lee_consult).
 
 -export([ metamodel/0
@@ -22,6 +46,20 @@
                        , config_name := string()
                        }.
 
+%% @doc Metamodel module containing metatypes for reading
+%% configuration from `eterm' files
+%%
+%% It defines the following metatype:
+%% == consult ==
+%%
+%% === Metaparameters ===
+%% <ul><li>`file_key' of type `atom()':
+%%     Configuration file key
+%%     </li>
+%% </ul>
+%%
+%% === Depends on ===
+%% {@link lee:base_metamodel/0 . value}
 -spec metamodel() -> lee:module().
 metamodel() ->
     #{ metatype =>

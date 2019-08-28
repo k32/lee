@@ -37,7 +37,10 @@
 start_link(Model, InitialData) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Model, InitialData], []).
 
-%% @doc Starts the server
+%% @doc Starts the server with a model is gathered from "interface
+%% modules". List of interface modules is set via `interface_modules'
+%% environment variable of `lee' application. Interface modules should
+%% implement {@link lee_interface_module} behavior.
 -spec start_link(lee:patch()) -> {ok, pid()}.
 start_link(InitialData) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [InitialData], []).
@@ -95,6 +98,7 @@ run_t(Fun0) ->
 %%% gen_server callbacks
 %%%===================================================================
 
+%% @private
 init([InitialData]) ->
     %% Collect model from the interface_modules:
     InterfaceModules = application:get_env(lee, interface_modules, []),
@@ -118,24 +122,30 @@ init([Model0, InitialData]) ->
            , data = Data
            }}.
 
+%% @private
 handle_call({patch, Fun}, _From, S0 = #s{model = M, data = D}) ->
     Reply = do_patch(Fun, M, D),
     {reply, Reply, S0};
 handle_call(_Request, _From, State) ->
     {reply, {error, unknown_call}, State}.
 
+%% @private
 handle_cast(_Request, State) ->
     {noreply, State}.
 
+%% @private
 handle_info(_Info, State) ->
     {noreply, State}.
 
+%% @private
 terminate(_Reason, _State) ->
     ok.
 
+%% @private
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
+%% @private
 format_status(_Opt, Status) ->
     Status.
 

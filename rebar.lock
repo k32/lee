@@ -1,8 +1,8 @@
 {"1.1.0",
 [{<<"map_sets">>,{pkg,<<"map_sets">>,<<"1.1.0">>},0},
- {<<"typerefl">>,{pkg,<<"typerefl">>,<<"0.1.0">>},0}]}.
+ {<<"typerefl">>,{pkg,<<"typerefl">>,<<"0.1.1">>},0}]}.
 [
 {pkg_hash,[
  {<<"map_sets">>, <<"517897DC5830F26770798B3226FCE515B94A37C31A8E714FBED0934EC4ABC630">>},
- {<<"typerefl">>, <<"21BD7C804117CE7DFE1A2E7FD04277B727A6FB37DCA5A8B5B4BB38E149B2B0F8">>}]}
+ {<<"typerefl">>, <<"BF34C01369574E1516CED7338E3FD86D0BC50764CC80BA052EE2D6BC58BC6062">>}]}
 ].

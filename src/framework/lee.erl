@@ -81,10 +81,9 @@
 %% API functions
 %%====================================================================
 
-%% @doc Put model to a namespace
+%% @doc Put model to a namespace.
 %%
-%% ```namespace([foo, bar], A)''' is equivalent to writing
-%% ```#{foo => #{bar => A}}'''
+%% `namespace([foo, bar], A)' is equivalent to `#{foo => #{bar => A}}'
 -spec namespace(lee:key(), lee:module()) ->
                        lee:module().
 namespace(Key, M) ->
@@ -95,8 +94,35 @@ namespace(Key, M) ->
                , lists:reverse(Key)
                ).
 
-%% @doc Model module containing basic configuration validation
-%% metaclasses
+%% @doc Model module containing basic metatypes:
+%%
+%% == value ==
+%%
+%% `value' is a leaf node, i.e. a concrete value.
+%%
+%% === Metaparameters ===
+%% <ul><li>`type' of type `typerefl:type()':
+%%     Type of the value
+%%     </li>
+%%     <li>`default' (optional):
+%%     Default value, if present</li>
+%%     <li>`oneliner' of type `string()' (optional, but highly desired):
+%%     One-sentence doc string</li>
+%%     <li>`doc' of type `string()' (optional, but highly desired):
+%%     Long description using <a href="https://docbook.org/">DocBook</a>
+%%     markup</li>
+%% </ul>
+%%
+%% == map ==
+%% `map' denotes a container node that groups multiple values together.
+%%
+%% <b>Metaparameters</b>:
+%% <ul><li>`key_elements' of type `[lee:key()]':
+%%     List of child element keys that identify the map. Optional,
+%%     defaults to `[]'
+%%     </li>
+%% </ul>
+%%
 -spec base_metamodel() -> lee:module().
 base_metamodel() ->
     namespace([metatype]
@@ -108,7 +134,9 @@ base_metamodel() ->
                         , doc_gen           => fun lee_doc:document_values/2
                         }}
                 , map =>
-                      {[metatype], #{}}
+                      {[metatype],
+                       #{ meta_validate     => fun meta_validate_map/4
+                        }}
                 , doc_root =>
                       {[metatype],
                        #{ meta_validate     => fun lee_doc:validate_doc_root/4
@@ -116,7 +144,10 @@ base_metamodel() ->
                 }
              ).
 
-%% @doc Get a value from the config:
+%% @doc Get a value from the config
+%%
+%% The return value is guaranteed safe, as long as `Data' has been
+%% validated against the `Model', and `Key' is a valid `Model' key
 -spec get(lee:model() | lee:cooked_module(), data(), lee:key()) -> term().
 get(Model, Data, Key) when ?is_storage(Data) ->
     case lee_storage:get(Key, Data) of
@@ -144,11 +175,16 @@ get(Model, [Data|Rest], Key) ->
             get(Model, Rest, Key)
     end.
 
-%% List instances that can match the pattern
+%% @doc List objects in `Data' that can match `Key'
+%%
+%% `?children' nodes in the key will be replaced with actual child
+%% keys, e.g. ```list(Model, Data, [foo, ?children])''' will return
+%% ```[[foo, ?lcl(1)], [foo, ?lcl(2)]]''' when map `[foo]' contains
+%% two children with keys `1' and `2'.
 -spec list(model() | cooked_module(), data(), lee:key()) -> [lee:key()].
-list(_Model, Data, Pattern) when ?is_storage(Data) ->
+list(_Model, Data, Key) when ?is_storage(Data) ->
     %% TODO: Include default values in the list
-    lee_storage:list(Pattern, Data);
+    lee_storage:list(Key, Data);
 list(Model, Data, Pattern) when is_list(Data) ->
     lists:usort(lists:foldl( fun(I, Acc) ->
                                      list(Model, I, Pattern) ++ Acc
@@ -156,19 +192,24 @@ list(Model, Data, Pattern) when is_list(Data) ->
                            , []
                            , Data)).
 
-%% Validate all values against the model
+%% @equiv validate(all, Model, Data)
 -spec validate(lee:model(), data()) -> validate_result().
 validate(Model, Data) ->
     validate(all, Model, Data).
 
+%% @doc Validate `Data' against `Model'. `MetaTypes' is a list of
+%% metatypes that should be validated, or atom `all'
 -spec validate([metatype()] | all, lee:model(), data()) -> validate_result().
 validate(MetaTypes, Model, Data) ->
     validate(validate_node, MetaTypes, Model, Data).
 
+%% @equiv meta_validate(all, Model)
 -spec meta_validate(lee:model()) -> validate_result().
 meta_validate(Model) ->
     meta_validate(all, Model).
 
+%% @doc Validate model itself against its metamodel. Useful for
+%% spotting bugs in the model definition
 -spec meta_validate([metatype()] | all, lee:model()) -> validate_result().
 meta_validate(MetaTypes, Model) ->
     Data = lee_storage:new(lee_map_storage), %% Mostly to make dialyzer happy
@@ -317,6 +358,33 @@ meta_validate_value(_Model, _, Key, #mnode{metaparams = Attrs}) ->
     lee_lib:perform_checks(Key, Attrs, [ fun lee_doc:check_docstrings/1
                                        , fun check_type_and_default/1
                                        ]).
+
+-spec meta_validate_map(lee:model(), _, lee:key(), #mnode{}) ->
+                            lee_lib:check_result().
+meta_validate_map(#model{model = Model}, _, Key, #mnode{metaparams = Params}) ->
+    io:format("OHAYO: ~p~n", [Model]),
+    ValidateKey =
+        fun(ChildKey) ->
+                case lee_storage:get(Key ++ [?children|ChildKey], Model) of
+                    undefined ->
+                        Error = lee_lib:format( "~p is not a valid child key of ~p"
+                                              , [ChildKey, Key]
+                                              ),
+                        {true, Error};
+                    {ok, _} ->
+                        false
+                end
+        end,
+    { case Params of
+          #{key_elements := KeyElems} when is_list(KeyElems) ->
+              lists:filtermap(ValidateKey, KeyElems);
+          #{key_elements := _}  ->
+              ["`key_elements' should be a list of valid child keys"];
+          _ ->
+              []
+      end
+    , []
+    }.
 
 check_type_and_default(Attrs) ->
     case Attrs of

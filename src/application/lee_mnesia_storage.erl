@@ -8,9 +8,19 @@
 -export([create/1, get/2, patch/3, from_table/1]).
 
 %%====================================================================
+%% API
+%%====================================================================
+
+%% @doc Create a Lee storage from an existing Mnesia table `TabName'
+-spec from_table(atom()) -> lee_storage:data(_).
+from_table(TabName) ->
+    lee_storage:wrap(?MODULE, TabName).
+
+%%====================================================================
 %% lee_storage callbacks
 %%====================================================================
 
+%% @private
 create(Options) ->
     TabName = maps:get(table_name, Options, lee_mnesia_storage),
     TabOpts = maps:get(table_options, Options, []),
@@ -23,6 +33,7 @@ create(Options) ->
     end,
     TabName.
 
+%% @private
 get(Key, TabName) ->
     case mnesia:read(TabName, Key) of
         [{_, Key, Val}] ->
@@ -31,6 +42,7 @@ get(Key, TabName) ->
             undefined
     end.
 
+%% @private
 patch(TabName, Delete, Set) ->
     case mnesia:is_transaction() of
         true ->
@@ -42,10 +54,6 @@ patch(TabName, Delete, Set) ->
                                    end),
             Result
     end.
-
--spec from_table(atom()) -> lee_storage:data(_).
-from_table(TabName) ->
-    lee_storage:wrap(?MODULE, TabName).
 
 %%====================================================================
 %% Internal functions

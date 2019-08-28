@@ -1,3 +1,20 @@
+%% @doc Model-driven CLI argument parser
+%%
+%% This module helps building command line interfaces that look like
+%% this:
+%%
+%% ```
+%% my_program -vfc1 --foo --bar 1 @action1 --foo 11 @action2 quux 1 -- -v @foo
+%%            ----- ----- ------- -------- -------- -------- ---- -    -------
+%%              ^      ^    ^        ^        ^        ^      ^   ^       ^
+%%              |      |    |        |        |        |      |   |       |
+%%         short args  | long arg    |  long arg in    |   positional ----+
+%%                     |             | "action1" scope |      args
+%%                     |             |                 |
+%%                  long flag   CLI action    another CLI action
+%% '''
+%%
+%% CLI actions start with sigil @ and define their own scope
 -module(lee_cli).
 
 %% TODO: This module is experimental; it's too convoluted and it needs
@@ -35,6 +52,90 @@
                | separator
                .
 
+%% @doc Metamodel module containing definitions of CLI-related metatypes:
+%%
+%% == cli_param ==
+%% `cli_param' denotes a regular CLI argument.
+%%
+%% === Metaparameters ===
+%%   <ul><li>`cli_operand' of type `string(I)':
+%%       long operand name without leading dashes</li>
+%%       <li>`cli_short' of type `char()':
+%%       short operand name</li>
+%%   </ul>
+%%
+%% <b>Note:</b> instances of this metatype must include either or both
+%% parameters.
+%%
+%% === Depends on ===
+%% {@link lee:base_metamodel/0 . value}
+%%
+%% === Example ===
+%% ```
+%% {[value, cli_param],
+%%  #{ type        => boolean()
+%%   , cli_operand => "verbose"
+%%   , cli_short   => $V
+%%   }}'''
+%%
+%% == cli_action ==
+%% `cli_action' defines a CLI action
+%%
+%% === Metaparameters ===
+%% <ul><li>`cli_operand' of type `string(I)':
+%%     CLI action name without leading @</li>
+%% </ul>
+%%
+%% === Depends on ===
+%% {@link lee:base_metamodel/0 . value}
+%%
+%% === Example ===
+%% ```
+%% {[map, cli_action],
+%%   #{ cli_operand  => "compile"
+%%    , key_elements => [[foo]] %% Relative key of `foo' child
+%%    },
+%%   #{ foo =>
+%%        {[value, cli_param],
+%%         ...}
+%%    }}'''
+%%
+%% == cli_positional ==
+%% `cli_positional' denotes a positional CLI argument
+%%
+%% === Metaparameters ===
+%%
+%% <ul><li>`cli_arg_position' of type `integer() | rest':
+%% Position of CLI argument</li></ul>
+%%
+%% === Notes ===
+%% Actual integer values `cli_arg_position' are
+%% irrelevant, order is what matters.
+%%
+%% Values that are declared as `rest' should be have `list(A)'
+%% type. Each scope can have at most one `rest' argument.
+%%
+%% === Depends on ===
+%% {@link lee:base_metamodel/0 . map}
+%%
+%% === Example ===
+%% ```
+%% #{ foo =>
+%%     {[value, cli_positional],
+%%       #{ type             => integer()
+%%        , cli_arg_position => 10
+%%        }},
+%%  , bar =>
+%%      {[value, cli_positional],
+%%       #{ type             => string()
+%%        , cli_arg_position => 20
+%%        }}
+%%  , baz =>
+%%      {[value, cli_positional],
+%%       #{ type             => list(integer())
+%%        , cli_arg_position => rest
+%%        }}
+%%  }'''
 -spec metamodel() -> lee:module().
 metamodel() ->
     #{metatype =>
@@ -55,12 +156,12 @@ metamodel() ->
            }
      }.
 
-%% @doc Read CLI arguments to a patch
+%% @doc Read CLI arguments and create a configuration patch
 %% @throws {error, string()}
 -spec read(lee:model(), [string()]) -> lee:patch().
-read(Model, Args0) ->
+read(Model, Args) ->
     Scopes = mk_index(Model),
-    Tokens = tokenize(?sigil, Args0),
+    Tokens = tokenize(?sigil, Args),
     case split_commands(Tokens) of
         [[{command, _} | _] | _] = Commands ->
             Global = [];
@@ -83,17 +184,21 @@ read(Model, Args0) ->
         Error -> throw({error, Error})
     end.
 
+%% @doc Read CLI arguments and apply the changes to the storage
+%% @throws {error, string()}
 -spec read_to(lee:model(), [string()], lee_storage:data()) ->
                      lee_storage:data().
 read_to(Model, Args, Data) ->
     Patch = read(Model, Args),
     lee_storage:patch(Data, Patch).
 
+%% @private
 -spec tokenize(char(), [string()]) -> [token()].
 tokenize(Sigil, L) ->
     Tokens = [I || I <- tokenize_(Sigil, L), I /= []],
     group_tokens(Tokens).
 
+%% @private Extract documentation from the model
 -spec doc_gen(lee:model(), doc_config()) -> lee_doc:doc().
 doc_gen(Model, Config) ->
     [{global, Global}|Scopes] = lists:sort(maps:to_list(mk_index(Model))),
@@ -260,7 +365,7 @@ mk_index(Key, #mnode{metatypes = Meta, metaparams = Attrs}, Acc, Scope) ->
             SC = add_positional(Key, Attrs, maps:get(Scope, Acc)),
             {Acc #{Scope => SC}, Scope};
         {false, false, true} -> %% CLI action
-            NewScope = ?m_attr(cil_action, cli_operand, Attrs),
+            NewScope = ?m_attr(cli_action, cli_operand, Attrs),
             SC = #sc{ name = NewScope
                     , parent = Key
                     },

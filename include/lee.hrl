@@ -7,9 +7,9 @@
 
 -define(lcl(A), {'$child', A}). %% Lee ChiLd
 
--define(is_storage(A), (element(1, (A)) =:= lee_tree)).
+-define(lsngl, ?lcl([])).
 
--define(map_key, 'map_key').
+-define(is_storage(A), (element(1, (A)) =:= lee_tree)).
 
 %% Internal mnode definition
 -record(mnode,

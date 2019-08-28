@@ -42,9 +42,7 @@ validate_test() ->
                               , Model0
                               }
                      },
-    {ok, Model} = lee_model:compile( [lee:base_metamodel()]
-                                   , [Model1]
-                                   ),
+    {ok, Model} = compile(Model1),
     ?valid(#{[foo] => true}),
     ?valid(#{[foo] => true, [bar] => 1}),
     ?valid(#{[foo] => false, [bar] => -12}),
@@ -69,9 +67,7 @@ validate_test() ->
 
 meta_validate_value_test() ->
     Compile = fun(Attrs) ->
-                      lee_model:compile( [lee:base_metamodel()]
-                                       , [#{foo => {[value], Attrs}}]
-                                       )
+                      compile(#{foo => {[value], Attrs}})
               end,
     %% Missing `type':
     ?assertMatch( {error, {validation_error, _}}
@@ -90,6 +86,24 @@ meta_validate_value_test() ->
                 , Compile(#{type => integer(), doc => "<para>foo"})
                 ).
 
+meta_validate_map_test() ->
+    Model1 = #{foo => {[map], #{key_elements => foo}}},
+    ?assertMatch({error, {validation_error, _}}, compile(Model1)),
+    Model2 = #{foo => {[map], #{key_elements => []}}},
+    ?assertMatch({ok, _}, compile(Model2)),
+    Model3 = #{foo => {[map], #{key_elements => [[foo]]}}},
+    ?assertMatch({error, {validation_error, _}}, compile(Model3)),
+    Model4 = #{foo => {[map],
+                       #{key_elements => [bar]},
+                       #{bar => {[value], #{}}}
+                      }},
+    ?assertMatch({error, {validation_error, _}}, compile(Model4)),
+    Model5 = #{foo => {[map],
+                       #{key_elements => [[bar]]},
+                       #{bar => {[value], #{}}}
+                      }},
+    ?assertMatch({ok, _}, compile(Model5)).
+
 get_test() ->
     Model0 = #{ foo => {[value]
                        , #{type => typerefl:boolean()}
@@ -100,9 +114,7 @@ get_test() ->
               },
     Model1 = Model0 #{ baz => {[map], #{}, Model0}},
     Model2 = Model1 #{ baz => {[map], #{}, Model1}},
-    {ok, Model} = lee_model:compile( [lee:base_metamodel()]
-                                   , [Model2]
-                                   ),
+    {ok, Model} = compile(Model2),
     Patch = [ {set, [foo],                              true }
             , {set, [baz, ?lcl(0), foo],                true }
             , {set, [baz, ?lcl(0), bar],                0    }
@@ -135,9 +147,7 @@ overlay_test() ->
               },
     Model1 = Model0 #{ baz => {[map], #{}, Model0}},
     Model2 = Model1 #{ baz => {[map], #{}, Model1}},
-    {ok, Model} = lee_model:compile( [lee:base_metamodel()]
-                                   , [Model2]
-                                   ),
+    {ok, Model} = compile(Model2),
     Patch1 = [ {set, [foo],                              true }
              , {set, [baz, ?lcl(0), foo],                true }
              , {set, [baz, ?lcl(0), bar],                0    }
@@ -171,3 +181,8 @@ overlay_test() ->
                 , lee:list(Model, Config, [baz, ?children])
                 ),
     ok.
+
+compile(Model) ->
+    lee_model:compile( [lee:base_metamodel()]
+                     , [Model]
+                     ).

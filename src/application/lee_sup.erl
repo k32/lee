@@ -1,3 +1,4 @@
+%% @private
 -module(lee_sup).
 
 -behaviour(supervisor).

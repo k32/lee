@@ -34,7 +34,7 @@
 %%====================================================================
 
 %% @doc Merge multiple model and metamodel modules into a
-%% machine-friendly form.
+%% machine-friendly form
 -spec compile([M], [M]) -> {ok, #model{}} | {error, [term()]}
             when M :: lee:lee_module() | lee:cooked_module().
 compile(MetaModels0, Models0) ->
@@ -169,9 +169,10 @@ match(MK, IK) ->
 %% part</i>. Child object with <i>required part</i> of the key is
 %% mandatory if object with <i>base</i> key is present.
 %%
-%% Consider an example: ```[a, '$children', b, '$children',
-%% c]''' Here `[a]' may or may not have children, same goes for `[a,
-%% X, b]' Hence ```[a, '$children', b, $children']''' is the
+%% Consider an example:
+%% ```[a, '$children', b, '$children',c]'''
+%% Here `[a]' may or may not have children, same goes for
+%% `[a, X, b]'. Hence ```[a, '$children', b, $children']''' is the
 %% <i>base</i> of the key and `[c]' is the <i>required part</i>.
 -spec split_key(lee:model_key()) -> {lee:model_key(), lee:model_key()}.
 split_key(K) ->
@@ -180,6 +181,9 @@ split_key(K) ->
                                    ),
     {lists:reverse(Base0), lists:reverse(Req0)}.
 
+%% @doc Split a key into a list of child keys. Example:
+%% ```full_split_key([foo, ?children, bar, baz, ?lcl([1]), quux]) -->
+%%        [[foo, ?children], [bar, baz, ?lcl([1])], [quux]]'''
 -spec full_split_key(lee:key()) -> [lee:key()].
 full_split_key(Key) ->
     Pred = fun(?children) -> false;
