@@ -11,6 +11,7 @@
         , get_d/1
         , get/1
         , list/1
+        , list_d/1
         , dump/0
         , run_t/1
         ]).
@@ -66,6 +67,15 @@ get(Key) ->
     Model = lee_mnesia_storage:from_table(?model_table),
     Data = lee_mnesia_storage:from_table(?data_table),
     lee:get(Model, Data, Key).
+
+
+%% @doc List values (should be run from a mnesia transaction)
+-spec list_d(lee:key()) -> term().
+list_d(Pattern) ->
+    %% TODO: optimize these calls (should be constants)
+    Model = lee_dirty_mnesia_storage:from_table(?model_table),
+    Data = lee_dirty_mnesia_storage:from_table(?data_table),
+    lee:list(Model, Data, Pattern).
 
 %% @doc List values (should be run from a mnesia transaction)
 -spec list(lee:key()) -> term().

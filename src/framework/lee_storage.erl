@@ -65,7 +65,7 @@
 %% API function
 %%====================================================================
 
--spec new(module(), map()) -> data(_).
+-spec new(module(), term()) -> data(_).
 new(Backend, Options) ->
     Data0 = Backend:create(Options),
     Data  = Backend:patch(Data0, [], [{?rose_tree, #{}}]),
